@@ -1,0 +1,53 @@
+{
+  "name": "হিসাব — Hisab",
+  "short_name": "হিসাব",
+  "description": "হিসাব — আয়, খরচ, বাকি ও রিপোর্টের সহজ হিসাব। সম্পূর্ণ অফলাইনে কাজ করে।",
+  "lang": "bn",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait",
+  "background_color": "#EEF1F8",
+  "theme_color": "#5E5CE6",
+  "categories": ["finance", "productivity", "utilities"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "নতুন খরচ",
+      "short_name": "খরচ",
+      "description": "সরাসরি নতুন খরচ যোগ করুন",
+      "url": "./index.html?action=expense",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "নতুন আয়",
+      "short_name": "আয়",
+      "description": "সরাসরি নতুন আয় যোগ করুন",
+      "url": "./index.html?action=income",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}
