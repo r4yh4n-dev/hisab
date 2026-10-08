@@ -680,6 +680,10 @@ canvas{display:block;}
 }
 [data-theme="dark"] .tab-pill{background:rgba(126,124,255,.24);}
 .tab-row{position:relative;display:grid;grid-template-columns:repeat(5,1fr);}
+/* shop mode adds a 6th tab — the grid and the sliding pill both widen. These
+   overrides carry extra specificity so they win regardless of source order. */
+body[data-shop="true"] .tab-row{grid-template-columns:repeat(6,1fr);}
+body[data-shop="true"] .tab-pill{width:calc((100% - 12px) / 6);}
 .tab{
   position:relative;z-index:1;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
@@ -1028,6 +1032,403 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
 }
 .switch.on{background:var(--income);}
 .switch.on::after{transform:translateX(21px);}
+
+/* ============================================================
+   1.19b  v4 · SAFE AREA, SPLASH, ONBOARDING
+   ============================================================ */
+
+/* ---- safe area ---------------------------------------------------------
+   In standalone mode the web view starts at y=0 and the OS status bar sits
+   ON TOP of the page. The sticky glass header already pads itself by
+   --safe-t, but if a browser reports env(safe-area-inset-top) as 0 while
+   still reserving space (or the reverse) a bare strip appears above the
+   header. This fixed glass strip guarantees the status-bar zone is always
+   covered by glass, so the header visually blends into the status bar. */
+html{background:var(--bg);}
+body{overscroll-behavior-y:contain;}
+.safe-top{
+  position:fixed;top:0;left:0;right:0;
+  height:var(--safe-t);
+  z-index:39;
+  pointer-events:none;
+  background:var(--glass-bg-strong);
+  -webkit-backdrop-filter:var(--glass-blur);
+  backdrop-filter:var(--glass-blur);
+}
+@media (display-mode: standalone){
+  .safe-top{background:var(--glass-bg-strong);}
+  /* keep the floating tab bar clear of the home-indicator gesture bar */
+  .tabbar{bottom:calc(var(--safe-b) + 12px);}
+}
+body[data-standalone="false"] .safe-top{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;}
+
+/* ---- splash screen ----------------------------------------------------
+   Shown on every cold start. It is purely decorative: boot() runs in
+   parallel and the splash removes itself after ~900 ms, so it never delays
+   the app. */
+.splash{
+  position:fixed;inset:0;z-index:200;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:var(--bg);
+  transition:opacity .45s var(--ease), visibility .45s;
+}
+.splash::before{
+  content:"";position:absolute;inset:-12%;
+  background:
+    radial-gradient(58% 42% at 30% 18%, var(--blob-1), transparent 62%),
+    radial-gradient(52% 42% at 78% 80%, var(--blob-3), transparent 62%);
+  filter:blur(72px);opacity:.9;pointer-events:none;
+}
+.splash.hide{opacity:0;visibility:hidden;pointer-events:none;}
+.splash-ic{
+  position:relative;
+  width:104px;height:104px;border-radius:30px;
+  background:linear-gradient(135deg,#7B79F5,#5E5CE6 45%,#2DD4BF);
+  display:grid;place-items:center;
+  font-size:52px;font-weight:700;color:#fff;
+  box-shadow:0 26px 60px -20px rgba(94,92,230,.85), inset 0 1px 0 rgba(255,255,255,.5);
+  transform:scale(.82);opacity:0;
+  animation:splashIn .72s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+.splash-ic::after{
+  content:"";position:absolute;inset:-14px;border-radius:38px;
+  background:radial-gradient(closest-side, rgba(94,92,230,.42), transparent 72%);
+  filter:blur(14px);z-index:-1;
+  animation:splashGlow 2.2s ease-in-out infinite;
+}
+.splash-name{
+  position:relative;
+  font-size:23px;font-weight:700;letter-spacing:-.02em;
+  opacity:0;animation:splashUp .6s ease .26s forwards;
+}
+.splash-sub{
+  position:relative;
+  font-size:12.5px;font-weight:600;color:var(--text-3);letter-spacing:.08em;text-transform:uppercase;
+  opacity:0;animation:splashUp .6s ease .4s forwards;
+}
+@keyframes splashIn{to{transform:scale(1);opacity:1;}}
+@keyframes splashUp{from{transform:translateY(10px);}to{transform:none;opacity:1;}}
+@keyframes splashGlow{0%,100%{opacity:.55;}50%{opacity:1;}}
+body[data-reduced="true"] .splash-ic,
+body[data-reduced="true"] .splash-name,
+body[data-reduced="true"] .splash-sub{animation:none;transform:none;opacity:1;}
+
+/* ---- onboarding -------------------------------------------------------
+   3 swipeable slides with dot indicators. Track is a flex row translated
+   with transform only (GPU friendly, no layout thrash on low-end phones). */
+.onb{
+  position:fixed;inset:0;z-index:190;
+  display:flex;flex-direction:column;
+  background:var(--bg);
+  padding:calc(var(--safe-t) + 16px) 0 calc(var(--safe-b) + 18px);
+}
+.onb.hide{display:none;}
+.onb-skip{
+  align-self:flex-end;margin:0 18px 4px;
+  padding:9px 16px;border-radius:99px;
+  font-size:13px;font-weight:700;color:var(--text-2);
+  background:var(--surface-2);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  border:1px solid var(--glass-brd);
+}
+.onb-view{flex:1 1 auto;overflow:hidden;}
+.onb-track{
+  display:flex;height:100%;
+  transition:transform .44s cubic-bezier(.34,1.56,.64,1);
+  will-change:transform;
+}
+.onb-slide{
+  flex:0 0 100%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  padding:0 30px;text-align:center;
+}
+.onb-art{
+  width:132px;height:132px;border-radius:38px;
+  display:grid;place-items:center;font-size:60px;
+  background:linear-gradient(135deg,rgba(123,121,245,.22),rgba(45,212,191,.22));
+  border:1px solid var(--glass-brd);
+  box-shadow:inset 0 1px 0 var(--glass-inner), 0 20px 44px -22px rgba(94,92,230,.6);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+}
+.onb-h{font-size:24px;font-weight:700;letter-spacing:-.02em;}
+.onb-p{font-size:14px;color:var(--text-2);line-height:1.65;max-width:330px;}
+.onb-foot{padding:0 22px;}
+.onb-dots{display:flex;justify-content:center;gap:7px;margin-bottom:16px;}
+.onb-dots i{
+  width:7px;height:7px;border-radius:99px;background:var(--line-strong);
+  transition:width .3s var(--ease), background .3s var(--ease);
+}
+.onb-dots i.on{width:22px;background:var(--accent);}
+.onb-choice{margin-bottom:14px;}
+.onb-choice > label{
+  display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-3);margin:0 2px 8px;
+}
+
+/* ============================================================
+   1.19c  v4 · WALLETS, BACKUP BANNER, VOICE, SHOP, ABOUT
+   ============================================================ */
+
+/* ---- wallet carousel (horizontal snap scroll) ---- */
+.wcar{
+  display:flex;gap:11px;overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+  padding:4px 16px 10px;margin:0 -16px;
+  scrollbar-width:none;
+}
+.wcar::-webkit-scrollbar{display:none;}
+.wcard{
+  flex:0 0 auto;scroll-snap-align:start;
+  width:152px;padding:13px 14px;border-radius:22px;
+  background:var(--surface-2);
+  -webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);
+  border:1px solid var(--glass-brd);
+  box-shadow:var(--sh-2), inset 0 1px 0 var(--glass-inner);
+  text-align:left;
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+  position:relative;overflow:hidden;
+}
+.wcard:active{transform:scale(.96);}
+.wcard .wc-ic{
+  width:32px;height:32px;border-radius:11px;display:grid;place-items:center;
+  font-size:15px;margin-bottom:9px;color:#fff;
+}
+.wcard .wc-t{font-size:12px;font-weight:700;color:var(--text-2);}
+.wcard .wc-v{
+  font-size:17px;font-weight:700;letter-spacing:-.02em;margin-top:3px;
+  font-variant-numeric:tabular-nums;
+}
+.wcard.add{
+  display:grid;place-items:center;width:86px;
+  color:var(--accent);font-size:26px;font-weight:600;
+  border-style:dashed;
+}
+.wcard.neg .wc-v{color:var(--expense);}
+
+/* ---- backup reminder banner ---- */
+.bk-banner{
+  display:flex;align-items:center;gap:12px;
+  padding:13px 14px;border-radius:22px;margin-bottom:14px;
+  background:linear-gradient(135deg,rgba(255,149,0,.16),rgba(255,204,0,.12));
+  -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+  border:1px solid rgba(255,149,0,.28);
+  box-shadow:inset 0 1px 0 var(--glass-inner);
+}
+.bk-banner .bk-ic{
+  flex:0 0 36px;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;
+  background:rgba(255,149,0,.2);font-size:17px;
+}
+.bk-banner .bk-t{flex:1 1 auto;min-width:0;}
+.bk-banner .bk-l{font-size:13.5px;font-weight:700;}
+.bk-banner .bk-s{font-size:11.5px;color:var(--text-2);}
+
+/* ---- voice input ---- */
+.mic-btn{
+  position:relative;
+  width:46px;height:46px;border-radius:15px;display:grid;place-items:center;
+  color:#fff;background:linear-gradient(135deg,#7B79F5,#5E5CE6 45%,#2DD4BF);
+  box-shadow:0 12px 26px -12px rgba(94,92,230,.9), inset 0 1px 0 rgba(255,255,255,.4);
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+.mic-btn:active{transform:scale(.94);}
+.mic-btn svg{width:21px;height:21px;}
+.mic-btn.listening::after{
+  content:"";position:absolute;inset:-6px;border-radius:20px;
+  border:2px solid rgba(94,92,230,.55);
+  animation:micPulse 1.3s ease-out infinite;
+}
+.mic-btn.listening::before{
+  content:"";position:absolute;inset:-14px;border-radius:26px;
+  border:2px solid rgba(94,92,230,.3);
+  animation:micPulse 1.3s ease-out .35s infinite;
+}
+@keyframes micPulse{0%{transform:scale(.86);opacity:1;}100%{transform:scale(1.14);opacity:0;}}
+.voice-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0 2px;}
+.voice-ring{
+  width:96px;height:96px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(closest-side,rgba(94,92,230,.2),transparent 74%);
+  border:1px solid var(--glass-brd);
+  font-size:38px;
+  animation:voiceBreath 1.6s ease-in-out infinite;
+}
+@keyframes voiceBreath{0%,100%{transform:scale(.96);}50%{transform:scale(1.04);}}
+.voice-heard{
+  min-height:44px;width:100%;padding:12px 14px;border-radius:16px;
+  background:var(--surface-2);border:1px solid var(--glass-brd);
+  font-size:14px;line-height:1.5;text-align:center;
+}
+
+/* ---- badges (recurring, overdue) ---- */
+.badge{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:2px 7px;border-radius:99px;
+  font-size:9.5px;font-weight:700;letter-spacing:.02em;
+  vertical-align:middle;margin-left:5px;
+}
+.badge.rec{background:rgba(94,92,230,.16);color:var(--accent);}
+.badge.due{background:rgba(255,59,48,.16);color:var(--expense);}
+.badge.soon{background:rgba(255,149,0,.18);color:var(--warn);}
+.badge.low{background:rgba(255,59,48,.16);color:var(--expense);}
+.badge.ok{background:rgba(52,199,89,.16);color:var(--income);}
+
+/* ---- shop mode ---- */
+.shop-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px;}
+.prod{
+  padding:13px;border-radius:20px;text-align:left;
+  background:var(--surface-2);border:1px solid var(--glass-brd);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  box-shadow:inset 0 1px 0 var(--glass-inner);
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+.prod:active{transform:scale(.97);}
+.prod .p-n{font-size:13.5px;font-weight:700;line-height:1.35;}
+.prod .p-q{font-size:11.5px;color:var(--text-3);margin-top:3px;}
+.prod .p-pr{font-size:13px;font-weight:700;margin-top:7px;color:var(--accent);font-variant-numeric:tabular-nums;}
+
+/* cart rows in the sale sheet */
+.cart-row{
+  display:flex;align-items:center;gap:10px;padding:10px 0;
+  border-bottom:1px solid var(--line);
+}
+.cart-row:last-child{border-bottom:0;}
+.qty{
+  display:flex;align-items:center;gap:0;
+  border:1px solid var(--line-strong);border-radius:12px;overflow:hidden;
+}
+.qty button{
+  width:32px;height:32px;display:grid;place-items:center;
+  font-size:17px;font-weight:600;color:var(--text);
+  transition:transform .16s cubic-bezier(.34,1.56,.64,1);
+}
+.qty button:active{transform:scale(.88);}
+.qty span{min-width:30px;text-align:center;font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;}
+
+/* receipt (also used for the printed report) */
+.receipt{
+  width:100%;max-width:340px;margin:0 auto;padding:20px 18px;
+  background:#fff;color:#111;
+  border-radius:20px;
+  font-family:var(--font-app);
+  box-shadow:0 20px 44px -24px rgba(0,0,0,.5);
+}
+.receipt h3{margin:0;font-size:17px;font-weight:700;text-align:center;}
+.receipt .rc-meta{font-size:11px;color:#666;text-align:center;margin:4px 0 14px;line-height:1.6;}
+.receipt table{width:100%;border-collapse:collapse;font-size:12px;}
+.receipt th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#888;padding-bottom:6px;border-bottom:1px dashed #ccc;}
+.receipt td{padding:5px 0;border-bottom:1px dashed #eee;}
+.receipt td.r,.receipt th.r{text-align:right;}
+.receipt .rc-tot{display:flex;justify-content:space-between;font-size:13.5px;font-weight:700;margin-top:10px;}
+.receipt .rc-sub{display:flex;justify-content:space-between;font-size:12px;color:#555;margin-top:4px;}
+.receipt .rc-foot{margin-top:16px;font-size:10.5px;color:#888;text-align:center;border-top:1px dashed #ccc;padding-top:10px;}
+.receipt table + .rc-tot{margin-top:12px;}
+
+/* ---- about screen ---- */
+.about-hero{
+  display:flex;flex-direction:column;align-items:center;gap:9px;
+  padding:26px 18px 22px;margin-bottom:14px;
+  border-radius:28px;
+  background:var(--surface-2);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid var(--glass-brd);
+  box-shadow:var(--sh-2), inset 0 1px 0 var(--glass-inner);
+  text-align:center;
+}
+.about-ic{
+  width:88px;height:88px;border-radius:26px;
+  box-shadow:0 18px 40px -18px rgba(94,92,230,.8);
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+.about-ic:active{transform:scale(.94);}
+.about-n{font-size:20px;font-weight:700;letter-spacing:-.02em;}
+.vbadge{
+  display:inline-block;padding:4px 11px;border-radius:99px;
+  font-size:11px;font-weight:700;letter-spacing:.04em;
+  background:linear-gradient(135deg,rgba(123,121,245,.22),rgba(45,212,191,.22));
+  color:var(--accent);border:1px solid var(--glass-brd);
+}
+.dev-card{
+  display:flex;align-items:center;gap:13px;
+  padding:15px;border-radius:22px;margin-bottom:14px;
+  background:var(--surface-2);border:1px solid var(--glass-brd);
+  -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+  box-shadow:inset 0 1px 0 var(--glass-inner);
+}
+.dev-av{
+  flex:0 0 52px;width:52px;height:52px;border-radius:17px;
+  display:grid;place-items:center;font-size:19px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,#7B79F5,#5E5CE6 45%,#2DD4BF);
+  box-shadow:0 10px 22px -10px rgba(94,92,230,.9);
+}
+.pill-row{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:14px;}
+.pill{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:11px 15px;border-radius:99px;
+  font-size:13.5px;font-weight:600;
+  background:var(--surface-2);border:1px solid var(--glass-brd);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  color:var(--text);
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1);
+}
+.pill:active{transform:scale(.95);}
+.pill.accent{background:var(--accent);color:#fff;border-color:transparent;}
+.pill svg{width:17px;height:17px;}
+.privacy-card{
+  display:flex;gap:13px;align-items:flex-start;
+  padding:16px;border-radius:22px;margin-bottom:14px;
+  background:linear-gradient(135deg,rgba(52,199,89,.13),rgba(45,212,191,.1));
+  border:1px solid rgba(52,199,89,.24);
+}
+.privacy-card .pc-ic{font-size:22px;line-height:1;}
+.privacy-card p{font-size:12.8px;color:var(--text-2);line-height:1.65;margin:4px 0 0;}
+
+/* changelog accordion */
+.cl-item{
+  border-bottom:1px solid var(--line);
+}
+.cl-item:last-child{border-bottom:0;}
+.cl-head{
+  display:flex;align-items:center;gap:11px;width:100%;
+  padding:14px;text-align:left;
+}
+.cl-head .cl-v{font-size:13.5px;font-weight:700;}
+.cl-head .cl-d{font-size:11px;color:var(--text-3);}
+.cl-head .cl-x{
+  margin-left:auto;font-size:18px;color:var(--text-3);
+  transition:transform .3s var(--ease);
+}
+.cl-item.open .cl-x{transform:rotate(90deg);}
+.cl-body{
+  max-height:0;overflow:hidden;
+  transition:max-height .38s var(--ease);
+}
+.cl-item.open .cl-body{max-height:900px;}
+.cl-body ul{margin:0 0 14px;padding:0 18px 0 34px;}
+.cl-body li{font-size:12.6px;color:var(--text-2);line-height:1.75;margin:3px 0;}
+.about-foot{
+  text-align:center;font-size:11.5px;color:var(--text-3);
+  padding:6px 0 4px;line-height:1.9;
+}
+
+/* ---- print (report + receipt) ---- */
+@media print{
+  body{background:#fff !important;}
+  .mesh,.tabbar,.topbar,.toasts,.scrim,.sheet,.install-banner,.splash,.onb,
+  .safe-top,.ptr,.quick,.mic-btn,.sec-link{display:none !important;}
+  .main{padding:0 !important;max-width:none !important;}
+  .view{display:none !important;}
+  .view.active{display:block !important;}
+  .card,.receipt{
+    box-shadow:none !important;border:0 !important;background:#fff !important;
+    -webkit-backdrop-filter:none !important;backdrop-filter:none !important;
+    color:#111 !important;border-radius:0 !important;break-inside:avoid;
+  }
+  .print-only{display:block !important;}
+}
+.print-only{display:none;}
+
+/* shop-mode tab visibility — hidden in personal mode, shown in দোকান মোড */
+.hide-shop{display:none;}
+body[data-shop="true"] .tab.hide-shop{display:flex;}
 
 /* ============================================================
    1.19  PIN LOCK SCREEN
@@ -1400,7 +1801,64 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
 </style>
 </head>
 
-<body data-view="home">
+<body data-view="home" data-shop="false">
+
+<!-- ==========================================================================
+     SPLASH — decorative only. boot() runs in parallel; the splash fades at
+     ~900ms so it never delays the app.
+     ========================================================================== -->
+<div class="splash" id="splash" aria-hidden="true">
+  <div class="splash-ic">৳</div>
+  <div class="splash-name">হিসাব — Hisab</div>
+  <div class="splash-sub">আপনার হিসাব, আপনার ফোনে</div>
+</div>
+
+<!-- ==========================================================================
+     ONBOARDING — first launch only (3 swipeable slides with dot indicators)
+     ========================================================================== -->
+<div class="onb hide" id="onb">
+  <button class="onb-skip" type="button" id="onbSkip" data-i18n="onb_skip">এড়িয়ে যান</button>
+  <div class="onb-view" id="onbView">
+    <div class="onb-track" id="onbTrack">
+      <div class="onb-slide">
+        <div class="onb-art">📄</div>
+        <div class="onb-h">হিসাব রাখুন সহজে</div>
+        <p class="onb-p">আয়, খরচ আর বাকি — সব একসাথে এক জায়গায়। কথায় বলে দিলেই হিসাব লিখে নেবে।</p>
+      </div>
+      <div class="onb-slide">
+        <div class="onb-art">🔐</div>
+        <div class="onb-h">ডেটা থাকবে আপনার কাছেই</div>
+        <p class="onb-p">সব হিসাব শুধু আপনার ফোনে জমা থাকে — ইন্টারনেট ছাড়াও কাজ করে। চাইলে ব্যাকআপ নিতে পারবেন।</p>
+      </div>
+      <div class="onb-slide">
+        <div class="onb-art">✨</div>
+        <div class="onb-h">শুরু করুন</div>
+        <p class="onb-p">পছন্দমতো ভাষা আর থিম বেছে নিন — পরে সেটিংস থেকেও বদলাতে পারবেন।</p>
+        <div style="width:100%;max-width:320px;" class="onb-choice">
+          <label>ভাষা</label>
+          <div class="seg" id="onbLangSeg">
+            <span class="seg-pill"></span>
+            <button type="button" data-onb-lang="bn">বাংলা</button>
+            <button type="button" data-onb-lang="en">English</button>
+          </div>
+        </div>
+        <div style="width:100%;max-width:320px;" class="onb-choice">
+          <label>থিম</label>
+          <div class="seg" id="onbThemeSeg">
+            <span class="seg-pill"></span>
+            <button type="button" data-onb-theme="auto">অটো</button>
+            <button type="button" data-onb-theme="light">লাইট</button>
+            <button type="button" data-onb-theme="dark">ডার্ক</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="onb-foot">
+    <div class="onb-dots" id="onbDots"><i class="on"></i><i></i><i></i></div>
+    <button class="btn btn-primary btn-block" type="button" id="onbNext">পরবর্তী</button>
+  </div>
+</div>
 
 <!-- animated gradient mesh -->
 <div class="mesh" aria-hidden="true">
@@ -1410,6 +1868,11 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
 <!-- ==========================================================================
      SECTION 2 · HTML
      ========================================================================== -->
+
+<!-- safe-area glass strip: guarantees the status-bar zone is covered even
+     when the browser reports env(safe-area-inset-top) as 0 (fixes the empty
+     gap that appeared above the header in standalone mode) -->
+<div class="safe-top" aria-hidden="true"></div>
 
 <!-- top bar with large collapsing iOS title -->
 <header class="topbar glass" id="topbar">
@@ -1438,6 +1901,9 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
   <!-- ================= REPORTS ================= -->
   <section class="view" id="view-reports" data-view="reports"></section>
 
+  <!-- ================= SHOP (v4 · only visible in দোকান মোড) ============= -->
+  <section class="view" id="view-shop" data-view="shop"></section>
+
   <!-- ================= SETTINGS ================= -->
   <section class="view" id="view-settings" data-view="settings"></section>
 
@@ -1462,6 +1928,10 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     <button class="tab" type="button" data-go="reports" aria-label="রিপোর্ট">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><rect x="5" y="12" width="3.4" height="6" rx="1.2"/><rect x="10.3" y="8" width="3.4" height="10" rx="1.2"/><rect x="15.6" y="4.5" width="3.4" height="13.5" rx="1.2"/></svg>
       <span class="t-lab" data-i18n="tab_reports">রিপোর্ট</span>
+    </button>
+    <button class="tab hide-shop" type="button" data-go="shop" aria-label="দোকান">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5h16v2a2.4 2.4 0 0 1-4.8 0 2.4 2.4 0 0 1-4.8 0 2.4 2.4 0 0 1-4.8 0Z"/><path d="M5.5 12.6V20h13v-7.4"/><path d="M10 20v-4.6h4V20"/></svg>
+      <span class="t-lab" data-i18n="tab_shop">দোকান</span>
     </button>
     <button class="tab" type="button" data-go="settings" aria-label="সেটিংস">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 14.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6 1h.2a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
@@ -1524,6 +1994,14 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     <div class="field">
       <label>পেমেন্ট মাধ্যম</label>
       <div class="chips" id="txMethodChips"></div>
+    </div>
+    <div class="field">
+      <label>ওয়ালেট</label>
+      <div class="chips" id="txWalletChips"></div>
+    </div>
+    <div class="field">
+      <label>পুনরাবৃত্তি</label>
+      <div class="chips" id="txRepChips"></div>
     </div>
     <div class="field">
       <label for="txNote">নোট (ঐচ্ছিক)</label>
@@ -1648,6 +2126,127 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
   </div>
 </div>
 
+<!-- ================= SHEET · VOICE INPUT (v4) ================= -->
+<div class="sheet" id="sheetVoice" role="dialog" aria-modal="true" aria-labelledby="sheetVoiceTitle">
+  <div class="sheet-grip"><span></span></div>
+  <div class="sheet-head">
+    <h2 id="sheetVoiceTitle" data-i18n="voice_title">ভয়েস ইনপুট</h2>
+    <button class="icon-btn" type="button" data-close-sheet="sheetVoice" aria-label="বন্ধ করুন">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="voiceBody"></div>
+  <div class="sheet-foot">
+    <button class="btn btn-ghost btn-sm" type="button" id="voiceAgain">🎙️ আবার বলুন</button>
+    <button class="btn btn-primary grow" type="button" id="voiceSave">এডিট করে সেভ</button>
+  </div>
+</div>
+
+<!-- ================= SHEET · WALLET ADD / EDIT (v4) ================= -->
+<div class="sheet" id="sheetWallet" role="dialog" aria-modal="true" aria-labelledby="sheetWalletTitle">
+  <div class="sheet-grip"><span></span></div>
+  <div class="sheet-head">
+    <h2 id="sheetWalletTitle" data-i18n="wallet_new">নতুন ওয়ালেট</h2>
+    <button class="icon-btn" type="button" data-close-sheet="sheetWallet" aria-label="বন্ধ করুন">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="walletBody"></div>
+  <div class="sheet-foot">
+    <button class="btn btn-ghost btn-sm" type="button" id="walletDeleteBtn" hidden>মুছুন</button>
+    <button class="btn btn-primary grow" type="button" id="walletSaveBtn">সেভ করুন</button>
+  </div>
+</div>
+
+<!-- ================= SHEET · WALLET TRANSFER (v4) ================= -->
+<div class="sheet" id="sheetTransfer" role="dialog" aria-modal="true" aria-labelledby="sheetTransferTitle">
+  <div class="sheet-grip"><span></span></div>
+  <div class="sheet-head">
+    <h2 id="sheetTransferTitle" data-i18n="wallet_transfer">ওয়ালেট ট্রান্সফার</h2>
+    <button class="icon-btn" type="button" data-close-sheet="sheetTransfer" aria-label="বন্ধ করুন">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="transferBody"></div>
+  <div class="sheet-foot">
+    <button class="btn btn-primary grow" type="button" id="transferSaveBtn">ট্রান্সফার করুন</button>
+  </div>
+</div>
+
+<!-- ================= SHEET · RECURRING MANAGER (v4) ================= -->
+<div class="sheet" id="sheetRecur" role="dialog" aria-modal="true" aria-labelledby="sheetRecurTitle">
+  <div class="sheet-grip"><span></span></div>
+  <div class="sheet-head">
+    <h2 id="sheetRecurTitle" data-i18n="recur_title">রিকারিং এন্ট্রি</h2>
+    <button class="icon-btn" type="button" data-close-sheet="sheetRecur" aria-label="বন্ধ করুন">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="recurBody"></div>
+  <div class="sheet-foot">
+    <button class="btn btn-primary btn-block" type="button" id="recurAddBtn" data-act="recur-add">+ নতুন রিকারিং এন্ট্রি</button>
+  </div>
+</div>
+
+<!-- ================= SHEET · ABOUT (v4) ================= -->
+<div class="sheet" id="sheetAbout" role="dialog" aria-modal="true" aria-labelledby="sheetAboutTitle">
+  <div class="sheet-grip"><span></span></div>
+  <div class="sheet-head">
+    <h2 id="sheetAboutTitle" data-i18n="about">অ্যাপ সম্পর্কে</h2>
+    <button class="icon-btn" type="button" data-close-sheet="sheetAbout" aria-label="বন্ধ করুন">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="aboutBody"></div>
+</div>
+
+<!-- ================= SHEET · PRODUCT ADD / EDIT (v4 shop) ============ -->
+<div class="sheet" id="sheetProduct" role="dialog" aria-modal="true" aria-labelledby="sheetProductTitle">
+  <div class="sheet-grip"><span></span></div>
+  <div class="sheet-head">
+    <h2 id="sheetProductTitle" data-i18n="prod_new">নতুন পণ্য</h2>
+    <button class="icon-btn" type="button" data-close-sheet="sheetProduct" aria-label="বন্ধ করুন">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="prodBody"></div>
+  <div class="sheet-foot">
+    <button class="btn btn-ghost btn-sm" type="button" id="prodDeleteBtn" hidden>মুছুন</button>
+    <button class="btn btn-primary grow" type="button" id="prodSaveBtn">সেভ করুন</button>
+  </div>
+</div>
+
+<!-- ================= SHEET · NEW SALE (v4 shop) ================= -->
+<div class="sheet" id="sheetSale" role="dialog" aria-modal="true" aria-labelledby="sheetSaleTitle">
+  <div class="sheet-grip"><span></span></div>
+  <div class="sheet-head">
+    <h2 id="sheetSaleTitle" data-i18n="sale_new">নতুন বিক্রি</h2>
+    <button class="icon-btn" type="button" data-close-sheet="sheetSale" aria-label="বন্ধ করুন">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="saleBody"></div>
+  <div class="sheet-foot">
+    <button class="btn btn-primary grow" type="button" id="saleSaveBtn">বিক্রি সেভ করুন</button>
+  </div>
+</div>
+
+<!-- ================= SHEET · INVOICE / RECEIPT (v4 shop) ============= -->
+<div class="sheet" id="sheetReceipt" role="dialog" aria-modal="true" aria-labelledby="sheetReceiptTitle">
+  <div class="sheet-grip"><span></span></div>
+  <div class="sheet-head">
+    <h2 id="sheetReceiptTitle" data-i18n="invoice">ইনভয়েস</h2>
+    <button class="icon-btn" type="button" data-close-sheet="sheetReceipt" aria-label="বন্ধ করুন">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="receiptBody"></div>
+  <div class="sheet-foot">
+    <button class="btn btn-ghost btn-sm" type="button" data-act="receipt-share">📤 শেয়ার</button>
+    <button class="btn btn-primary grow" type="button" data-act="receipt-print">🖨️ প্রিন্ট / PDF</button>
+  </div>
+</div>
+
 <!-- pull-to-refresh indicator (Home) -->
 <div class="ptr" id="ptr" aria-hidden="true">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/></svg>
@@ -1746,6 +2345,38 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  /* ----------------------------------------------------------------------
+     v4 · self-check plumbing
+     A tiny registry of non-fatal problems. Each is logged once with
+     console.warn so it is visible in DevTools, and the startup self-check
+     can summarise them. Nothing here ever blocks the UI.
+     ---------------------------------------------------------------------- */
+  var WARNED = {};
+  function warnOnce(key, msg) {
+    if (WARNED[key]) return;
+    WARNED[key] = true;
+    try { console.warn('[Hisab v' + APP_VERSION + '] ' + key + ': ' + msg); } catch (err) {}
+  }
+
+  /* run at boot: reports anything that failed to install correctly */
+  function selfCheck() {
+    var issues = [];
+    if (!STORE_READY) issues.push('IndexedDB not active — using localStorage fallback');
+    if (!('serviceWorker' in navigator)) issues.push('service worker unsupported');
+    if (!S) issues.push('state failed to load');
+    if (S && (!Array.isArray(S.categories) || !S.categories.length)) issues.push('no categories');
+    if (S && (!Array.isArray(S.wallets) || !S.wallets.length)) issues.push('no wallets');
+    if (document.getElementById('view-shop') === null) issues.push('shop view missing from DOM');
+    if (!document.getElementById('installBanner')) issues.push('install banner missing');
+    if (issues.length) {
+      for (var i = 0; i < issues.length; i++) warnOnce('selfcheck-' + i, issues[i]);
+    } else {
+      try { console.log('[Hisab v' + APP_VERSION + '] self-check OK · ' +
+        S.txs.length + ' txs · ' + S.people.length + ' people · ' + S.wallets.length + ' wallets'); } catch (err) {}
+    }
+    return issues;
   }
 
   /** ISO date string (YYYY-MM-DD) for a Date, in LOCAL time */
@@ -2159,7 +2790,204 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     ios_btn: ['কীভাবে?', 'How?'],
     ios_how: ['Safari-তে নিচের Share বোতাম চেপে “Add to Home Screen” বেছে নিন', 'In Safari tap Share, then choose “Add to Home Screen”'],
     update_ready: ['নতুন সংস্করণ এসেছে', 'A new version is ready'],
-    update_btn: ['রিলোড', 'Reload']
+
+    /* v4 — small words + rows that were used before they were declared */
+    on: ['চালু', 'On'],
+    off: ['বন্ধ', 'Off'],
+    overdue: ['মেয়াদ পার', 'Overdue'],
+    due_soon: ['শীঘ্রই মেয়াদ', 'Due soon'],
+    offline_ready: ['অফলাইন প্রস্তুত', 'Offline ready'],
+    pwa_ready: ['অ্যাপ ইনস্টল করা যায় · ইন্টারনেট ছাড়াও চলে', 'Installable · works without internet'],
+    protected_storage: ['সুরক্ষিত স্টোরেজ', 'Protected storage'],
+    recurring: ['রিকারিং', 'Recurring'],
+    repeat: ['পুনরাবৃত্তি', 'Repeat'],
+    recur_sub: ['স্বয়ংক্রিয় এন্ট্রি, পজ বা এডিট করুন', 'Auto entries — pause or edit'],
+    msg_template: ['বাকির বার্তা', 'Reminder message'],
+    msg_template_sub: ['চাইলে নিজের মতো লিখে নিন', 'Write your own if you like'],
+    msg_hint: ['{name} = নাম, {amount} = টাকার পরিমাণ, {date} = তারিখ',
+               '{name} = person, {amount} = amount, {date} = date'],
+    share_report: ['রিপোর্ট শেয়ার করুন', 'Share report'],
+    pdf_report: ['PDF রিপোর্ট', 'PDF report'],
+    update_btn: ['রিলোড', 'Reload'],
+
+    /* ==================================================================
+       v4 · everything new in 2.0.0  (bn = index 0, en = index 1)
+       ================================================================== */
+
+    /* ---- storage + data safety ---- */
+    store_fallback: ['ডেটা ব্যাকআপ স্টোরেজে রাখা হয়েছে', 'Saved to fallback storage'],
+    store_failed: ['ডেটা সেভ করা যায়নি — ফোনের স্টোরেজ পূর্ণ হতে পারে', 'Could not save — device storage may be full'],
+    saved: ['সেভ হয়েছে', 'Saved'],
+    data_title: ['ডেটা ও স্টোরেজ', 'Data & storage'],
+    protected_on: ['সুরক্ষিত স্টোরেজ: চালু', 'Protected storage: ON'],
+    protected_off: ['সুরক্ষিত স্টোরেজ: বন্ধ', 'Protected storage: OFF'],
+    protected_sub: ['ব্রাউজার যেন ডেটা মুছে না ফেলে', 'Asks the browser not to clear your data'],
+    usage_sub: ['ব্যবহার হচ্ছে', 'Currently used'],
+    backup_remind: ['ব্যাকআপ নিন', 'Time to back up'],
+    backup_never: ['এখনো কোনো ব্যাকআপ নেওয়া হয়নি', 'No backup has been taken yet'],
+    backup_ago: ['শেষ ব্যাকআপ {n} দিন আগে', 'Last backup was {n} days ago'],
+    backup_now: ['এখনই ব্যাকআপ', 'Back up now'],
+    backup_done: ['ব্যাকআপ ফাইল ডাউনলোড হয়েছে', 'Backup file downloaded'],
+    backup_interval: ['ব্যাকআপ রিমাইন্ডার', 'Backup reminder'],
+    backup_off: ['বন্ধ', 'Off'],
+    import_q: ['ব্যাকআপ ফিরিয়ে আনবেন?', 'Restore this backup?'],
+    import_body: ['ফাইলে {n} টি লেনদেন ও {p} জন ব্যক্তি আছে। “রিপ্লেস” করলে এখনকার সব ডেটা মুছে যাবে; “মার্জ” করলে নতুনগুলো যোগ হবে।',
+                  'This file has {n} transactions and {p} people. “Replace” erases current data; “Merge” adds only what is new.'],
+    import_replace: ['রিপ্লেস করুন', 'Replace'],
+    import_merge: ['মার্জ করুন', 'Merge'],
+    import_ok: ['ব্যাকআপ ঠিক আছে', 'Backup is valid'],
+
+    /* ---- wallets / accounts ---- */
+    wallet: ['ওয়ালেট', 'Wallet'],
+    wallets: ['ওয়ালেট', 'Wallets'],
+    wallet_new: ['নতুন ওয়ালেট', 'New wallet'],
+    wallet_edit: ['ওয়ালেট সম্পাদনা', 'Edit wallet'],
+    wallet_name_bn: ['নাম (বাংলা)', 'Name (Bangla)'],
+    wallet_name_en: ['নাম (English)', 'Name (English)'],
+    wallet_opening: ['শুরুর ব্যালেন্স', 'Opening balance'],
+    wallet_added: ['ওয়ালেট যোগ হয়েছে', 'Wallet added'],
+    wallet_deleted: ['ওয়ালেট মুছে ফেলা হয়েছে', 'Wallet deleted'],
+    wallet_delete_q: ['ওয়ালেট মুছবেন?', 'Delete this wallet?'],
+    wallet_delete_sub: ['আগের লেনদেনগুলো অন্য ওয়ালেটে সরিয়ে নেওয়া হবে', 'Its transactions will be moved to another wallet'],
+    wallet_delete_used: ['এই ওয়ালেটে {n} টি লেনদেন আছে — সেগুলো অন্য ওয়ালেটে সরানো হবে', 'This wallet has {n} transactions — they will be moved to another wallet'],
+    wallet_need_one: ['অন্তত একটি ওয়ালেট থাকতে হবে', 'At least one wallet must remain'],
+    wallet_need_two: ['ট্রান্সফারের জন্য অন্তত দুটি ওয়ালেট দরকার', 'Transfers need at least two wallets'],
+    wallet_from: ['যেখান থেকে', 'From'],
+    wallet_to: ['যেখানে', 'To'],
+    wallet_transfer: ['ওয়ালেট ট্রান্সফার', 'Wallet transfer'],
+    wallet_transferred: ['ট্রান্সফার সম্পন্ন হয়েছে', 'Transfer complete'],
+    wallet_same: ['একই ওয়ালেটে ট্রান্সফার করা যাবে না', 'Cannot transfer to the same wallet'],
+    wallet_tr_hint: ['ট্রান্সফার আয় বা খরচ হিসেবে গোনা হয় না — শুধু ওয়ালেটের ব্যালেন্স বদলায়।',
+                     'A transfer is not counted as income or expense — it only moves the wallet balances.'],
+    wallet_balances: ['ওয়ালেটের ব্যালেন্স', 'Wallet balances'],
+    wallet_filter: ['ওয়ালেট ফিল্টার', 'Wallet filter'],
+
+    /* ---- recurring entries ---- */
+    recur_title: ['রিকারিং এন্ট্রি', 'Recurring entries'],
+    recur_templates: ['দ্রুত টেমপ্লেট', 'Quick templates'],
+    recur_rules: ['চলমান নিয়ম', 'Active rules'],
+    recur_none: ['এখনো কোনো রিকারিং এন্ট্রি নেই।', 'No recurring entries yet.'],
+    recur_added: ['রিকারিং এন্ট্রি যোগ হয়েছে', 'Recurring entry added'],
+    recur_added_with: ['যোগ হয়েছে — {n} টি এন্ট্রি তৈরি হয়েছে', 'Added — {n} entries created'],
+    recur_every: ['কতবার হবে', 'Repeats'],
+    recur_title_ph: ['যেমন: বাসা ভাড়া', 'e.g. House rent'],
+    recur_auto: ['স্বয়ংক্রিয়', 'Automatic'],
+    rep: ['পুনরাবৃত্তি', 'Repeat'],
+    rep_none: ['হবে না', 'Does not repeat'],
+    paused: ['বন্ধ আছে', 'Paused'],
+    pause: ['বন্ধ করুন', 'Pause'],
+    resume: ['চালু করুন', 'Resume'],
+    start: ['শুরু', 'Start'],
+    end: ['শেষ', 'End'],
+    title: ['শিরোনাম', 'Title'],
+
+    /* ---- voice input ---- */
+    voice_title: ['ভয়েস ইনপুট', 'Voice input'],
+    voice_unsupported: ['এই ব্রাউজারে ভয়েস ইনপুট নেই', 'Voice input is not available in this browser'],
+    voice_listening: ['শুনছি… বাংলায় বলুন', 'Listening… speak in Bangla'],
+    voice_hint: ['যেমন: “বাজার ৫০০ টাকা”', 'e.g. “বাজার ৫০০ টাকা”'],
+    voice_heard: ['আপনি বলেছেন', 'You said'],
+    voice_edit_hint: ['পরের ধাপে খরচের ফর্মে খুলবে — সেখানে চাইলে বদলে নিতে পারবেন।',
+                      'Opens in the normal entry form next, where you can change anything.'],
+    voice_error: ['মাইক চালু করা যায়নি', 'Could not start the microphone'],
+    voice_denied: ['মাইকের অনুমতি দরকার — সেটিংস থেকে চালু করুন', 'Microphone permission is needed — enable it in settings'],
+    voice_nospeech: ['কিছু শোনা যায়নি, আবার বলুন', 'Nothing heard, please try again'],
+    voice_noamount: ['টাকার পরিমাণ বুঝতে পারিনি', 'Could not make out an amount'],
+    voice_saved_baki: ['{name}-এর বাকি হিসেবে যোগ হয়েছে', 'Added as {name}’s baki'],
+    person: ['ব্যক্তি', 'Person'],
+    unnamed: ['নামহীন', 'Unnamed'],
+    type: ['ধরন', 'Type'],
+    baki: ['বাকি', 'Baki'],
+    mic: ['ভয়েস', 'Voice'],
+
+    /* ---- shop mode ---- */
+    shop_mode: ['দোকান মোড', 'Shop mode'],
+    shop_mode_sub: ['স্টক, বিক্রি ও ইনভয়েস চালু করুন', 'Enable stock, sales and invoices'],
+    tab_shop: ['দোকান', 'Shop'],
+    my_shop: ['আমার দোকান', 'My shop'],
+    shop_name: ['দোকানের নাম', 'Shop name'],
+    shop_phone: ['দোকানের ফোন', 'Shop phone'],
+    stock: ['স্টক', 'Stock'],
+    shop_sales: ['বিক্রি', 'Sales'],
+    shop_report: ['দোকানের রিপোর্ট', 'Shop report'],
+    prod_new: ['নতুন পণ্য', 'New product'],
+    prod_edit: ['পণ্য সম্পাদনা', 'Edit product'],
+    prod_name: ['পণ্যের নাম', 'Product name'],
+    prod_buy: ['কেনা দাম', 'Buy price'],
+    prod_sell: ['বেচা দাম', 'Sell price'],
+    prod_qty: ['পরিমাণ', 'Quantity'],
+    prod_unit: ['একক', 'Unit'],
+    prod_low: ['কম স্টক সতর্কতা', 'Low-stock alert at'],
+    prod_added: ['পণ্য যোগ হয়েছে', 'Product added'],
+    prod_deleted: ['পণ্য মুছে ফেলা হয়েছে', 'Product deleted'],
+    prod_delete_q: ['পণ্য মুছবেন?', 'Delete this product?'],
+    prod_delete_sub: ['আগের বিক্রির হিসাব অপরিবর্তিত থাকবে', 'Past sales are not affected'],
+    prod_none: ['এখনো কোনো পণ্য নেই', 'No products yet'],
+    low_stock: ['স্টক কম', 'Low stock'],
+    out_of_stock: ['স্টক নেই', 'Out of stock'],
+    in_stock: ['স্টকে আছে', 'In stock'],
+    add_product: ['পণ্য যোগ করুন', 'Add product'],
+    new_sale: ['নতুন বিক্রি', 'New sale'],
+    sale_new: ['নতুন বিক্রি', 'New sale'],
+    sale_pick: ['পণ্য বাছুন', 'Pick products'],
+    sale_empty: ['কোনো পণ্য বাছা হয়নি', 'No products chosen'],
+    sale_saved: ['বিক্রি সেভ হয়েছে — {no}', 'Sale saved — {no}'],
+    sale_need_products: ['আগে স্টকে পণ্য যোগ করুন', 'Add products to stock first'],
+    sale_low_stock: ['{name}-এর স্টক যথেষ্ট নয়', 'Not enough stock for {name}'],
+    sale_customer: ['ক্রেতা', 'Customer'],
+    sale_discount: ['ছাড়', 'Discount'],
+    sale_paid: ['পরিশোধিত', 'Paid'],
+    sale_due: ['বাকি রইল', 'Due'],
+    sale_due_note: ['বাকি — ইনভয়েস', 'Due — invoice'],
+    invoice: ['ইনভয়েস', 'Invoice'],
+    customer: ['ক্রেতা', 'Customer'],
+    item: ['পণ্য', 'Item'],
+    qty: ['সংখ্যা', 'Qty'],
+    price: ['দাম', 'Price'],
+    subtotal: ['সাবটোটাল', 'Subtotal'],
+    total: ['মোট', 'Total'],
+    profit: ['লাভ', 'Profit'],
+    receipt_thanks: ['ধন্যবাদ, আবার আসবেন!', 'Thank you, please come again!'],
+    today_sales: ['আজকের বিক্রি', 'Today’s sales'],
+    month_sales: ['এই মাসের বিক্রি', 'This month’s sales'],
+    month_profit: ['এই মাসের লাভ', 'This month’s profit'],
+    top_products: ['সবচেয়ে বেশি বিক্রি', 'Top selling products'],
+    stock_value: ['স্টকের মূল্য', 'Stock value'],
+    today_profit: ['আজকের লাভ', 'Today’s profit'],
+
+    /* ---- reports ---- */
+    rep_share: ['রিপোর্ট শেয়ার করুন', 'Share report'],
+    rep_year: ['বার্ষিক রিপোর্ট', 'Yearly report'],
+    generated: ['তৈরি', 'Generated'],
+    pdf_report: ['PDF রিপোর্ট', 'PDF report'],
+
+    /* ---- about ---- */
+    dev_intro: ['আপনার দৈনন্দিন হিসাবকে সহজ ও সুন্দর করতে তৈরি।', 'Made to keep your daily accounts simple and beautiful.'],
+    feedback: ['ফিডব্যাক / বাগ রিপোর্ট', 'Feedback / bug report'],
+    feedback_msg: ['হ্যালো! হিসাব অ্যাপ v{v} নিয়ে আমার মতামত:\n\n(এখানে লিখুন)\n\n— ডিভাইস: {ua}',
+                   'Hello! My feedback about Hisab app v{v}:\n\n(write here)\n\n— Device: {ua}'],
+    share_app: ['বন্ধুকে শেয়ার করুন', 'Share with a friend'],
+    share_text: ['আপনার দৈনন্দিন হিসাব সহজে রাখুন — শুধু আপনার ফোনে, সম্পূর্ণ অফলাইনে।',
+                 'Keep your daily accounts easily — only on your phone, fully offline.'],
+    link_copied: ['লিংক কপি হয়েছে', 'Link copied'],
+    privacy_title: ['গোপনীয়তা', 'Privacy'],
+    privacy_note: ['আপনার ডেটা শুধু আপনার ফোনেই থাকে, কোথাও পাঠানো হয় না।',
+                   'Your data stays only on your phone and is never sent anywhere.'],
+    whats_new: ['নতুন কী আছে', 'What’s new'],
+    egg_found: ['🎉 আপনি গোপন ইস্টার এগ খুঁজে পেয়েছেন!', '🎉 You found the hidden easter egg!'],
+
+    /* ---- onboarding ---- */
+    onb_skip: ['এড়িয়ে যান', 'Skip'],
+    onb_next: ['পরবর্তী', 'Next'],
+    onb_start: ['শুরু করি', 'Get started'],
+    onb_lang: ['ভাষা', 'Language'],
+    onb_theme: ['থিম', 'Theme'],
+    onb_welcome_back: ['স্বাগতম! আপনার সব হিসাব আগের মতোই আছে।',
+                       'Welcome back! All your accounts are exactly as they were.'],
+    whatsnew_title: ['নতুন কী আছে — v2.0.0', 'What’s new — v2.0.0'],
+    whatsnew_body: ['আপনার সব পুরনো হিসাব নিরাপদে নতুন স্টোরেজে সরানো হয়েছে। এখন পাবেন: ভয়েস ইনপুট, রিকারিং এন্ট্রি, একাধিক ওয়ালেট, বাকির রিমাইন্ডার, দোকান মোড আরও অনেক কিছু।',
+                    'All your existing accounts were safely moved to the new storage. You now also get: voice input, recurring entries, multiple wallets, baki reminders, shop mode and more.'],
+    whatsnew_ok: ['বুঝেছি, এগিয়ে চলুন', 'Got it, let’s go']
   };
 
   /** translate a key; supports {placeholders} */
@@ -2179,6 +3007,45 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
   /* ======================================================================
      3.3  DEFAULTS + SAMPLE DATA
      ====================================================================== */
+
+  /*
+   * APP_VERSION — the single source of truth for the version string.
+   * Shown in Settings › About, in the changelog, in the feedback message and
+   * in backup filenames. Bump it here only.
+   */
+  var APP_VERSION = '2.0.0';
+  var APP_NAME = 'হিসাব — Hisab';
+  var DEV_NAME = 'R4Y CHOUDHURY';
+  var DEV_TG = 'r4yh4nxyz';
+  var DEV_TG_URL = 'https://t.me/r4yh4nxyz';
+
+  /*
+   * v4 · WALLETS / ACCOUNTS
+   * These five cover every payment method the app shipped with, so the
+   * method→wallet migration is a straight id match and no history is lost.
+   */
+  var DEFAULT_WALLETS = [
+    { id: 'cash',   bn: 'ক্যাশ',  en: 'Cash',   emoji: '💵', color: '#34C759', opening: 0 },
+    { id: 'bkash',  bn: 'বিকাশ',  en: 'bKash',  emoji: '📱', color: '#E2136E', opening: 0 },
+    { id: 'nagad',  bn: 'নগদ',    en: 'Nagad',  emoji: '📲', color: '#EE7623', opening: 0 },
+    { id: 'rocket', bn: 'রকেট',   en: 'Rocket', emoji: '🚀', color: '#8C3494', opening: 0 },
+    { id: 'bank',   bn: 'ব্যাংক', en: 'Bank',   emoji: '🏦', color: '#32ADE6', opening: 0 }
+  ];
+
+  var WALLET_COLORS = ['#34C759', '#E2136E', '#EE7623', '#8C3494', '#32ADE6',
+                       '#5E5CE6', '#FF9500', '#FF2D55', '#00C7BE', '#A2845E'];
+
+  /* quick-add templates offered inside the recurring section */
+  var RECUR_TEMPLATES = [
+    { id: 'rent',    bn: 'বাসা ভাড়া',    en: 'House rent',   type: 'expense', cat: 'bills',     amount: 3500 },
+    { id: 'net',     bn: 'ইন্টারনেট বিল', en: 'Internet bill', type: 'expense', cat: 'bills',    amount: 800  },
+    { id: 'salary',  bn: 'বেতন',          en: 'Salary',       type: 'income',  cat: 'salary',    amount: 25000 },
+    { id: 'power',   bn: 'বিদ্যুৎ বিল',   en: 'Electricity',  type: 'expense', cat: 'bills',     amount: 1200 }
+  ];
+
+  /* default polite reminder text — editable in Settings, {name} {amount} {date} */
+  var DEFAULT_MESSAGE_TEMPLATE =
+    'আসসালামু আলাইকুম {name} ভাই, আপনার কাছে আমার {amount} বাকি আছে। সুবিধামতো দিয়ে দিলে ভালো হয়। ধন্যবাদ।';
 
   /* category palette (used by the colour picker and default categories) */
   var PALETTE = ['#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#30D158', '#00C7BE',
@@ -2312,7 +3179,20 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
       pin: null,
       seeded: false,
       celebrate: true,      /* v2: silent confetti on save */
-      version: 1
+      /* ---- v4 additions ---- */
+      onboarded: false,           /* has the user finished the intro? */
+      whatsNewSeen: false,        /* has an upgrading user seen the v2 sheet? */
+      backupRemindDays: 7,        /* 0 = off, else 3 / 7 / 15 / 30 */
+      lastBackupDate: null,       /* ISO date of the last successful backup */
+      messageTemplate: DEFAULT_MESSAGE_TEMPLATE,
+      shopMode: false,            /* দোকান মোড */
+      shopName: '',
+      shopPhone: '',
+      storagePersisted: false,
+      persistSupported: true,
+      storageUsage: 0,
+      storageQuota: 0,
+      version: 2
     };
   }
 
@@ -2324,7 +3204,12 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
       txs: [],
       people: [],
       entries: [],
-      budgets: Object.assign({}, DEFAULT_BUDGETS)
+      budgets: Object.assign({}, DEFAULT_BUDGETS),
+      /* v4 collections */
+      wallets: DEFAULT_WALLETS.map(function (w) { return Object.assign({}, w, { custom: false }); }),
+      recurring: [],
+      products: [],
+      sales: []
     };
     var today = todayIso();
     SEED_TX.forEach(function (row) {
@@ -2337,6 +3222,7 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
         noteBn: row[4],
         noteEn: row[5],
         method: row[6],
+        walletId: row[6],        /* v4: the old method IS the wallet id */
         sample: true,
         createdAt: Date.now()
       });
@@ -2369,50 +3255,285 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     return st;
   }
 
-  /** load from localStorage, falling back to the sample state */
-  function loadState() {
-    var raw = null;
-    try { raw = localStorage.getItem(STORE_KEY); } catch (err) { raw = null; }
-    if (!raw) return buildSeedState();
-    try {
-      var parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object') throw new Error('bad');
-      /* merge with defaults so an older backup never breaks the app */
-      var base = {
-        settings: freshSettings(),
-        categories: DEFAULT_CATEGORIES.map(function (c) { return Object.assign({}, c, { custom: false }); }),
-        txs: [], people: [], entries: [], budgets: {}
+  /**
+   * Normalise any parsed state blob (from IndexedDB, localStorage or an
+   * imported backup) into a complete, safe state object. Shared by the
+   * loader, the migrator and the restore path so all three agree.
+   */
+  function normalizeState(parsed) {
+    if (!parsed || typeof parsed !== 'object') return null;
+    var base = {
+      settings: freshSettings(),
+      categories: DEFAULT_CATEGORIES.map(function (c) { return Object.assign({}, c, { custom: false }); }),
+      txs: [], people: [], entries: [], budgets: {}
+    };
+    var st = Object.assign(base, parsed);
+    st.settings = Object.assign(freshSettings(), parsed.settings || {});
+    if (!Array.isArray(st.categories) || !st.categories.length) {
+      st.categories = DEFAULT_CATEGORIES.map(function (c) { return Object.assign({}, c, { custom: false }); });
+    }
+    if (!Array.isArray(st.txs)) st.txs = [];
+    if (!Array.isArray(st.people)) st.people = [];
+    if (!Array.isArray(st.entries)) st.entries = [];
+    if (!Array.isArray(st.wallets)) st.wallets = [];
+    if (!Array.isArray(st.recurring)) st.recurring = [];
+    if (!Array.isArray(st.products)) st.products = [];
+    if (!Array.isArray(st.sales)) st.sales = [];
+    if (!st.budgets || typeof st.budgets !== 'object') st.budgets = {};
+    /* guarantee the 'other' fallback category exists */
+    if (!st.categories.some(function (c) { return c.id === 'other'; })) {
+      st.categories.push(Object.assign({}, DEFAULT_CATEGORIES[9], { custom: false }));
+    }
+    /* v4: make sure at least one wallet exists and every tx points at one.
+       Old transactions only carried a payment *method* — map it across so no
+       history is lost when the wallet feature appears. */
+    if (!st.wallets.length) st.wallets = DEFAULT_WALLETS.map(function (w) { return Object.assign({}, w, { custom: false }); });
+    var fallbackWallet = st.wallets[0] ? st.wallets[0].id : 'cash';
+    st.txs.forEach(function (tx) {
+      if (!tx.walletId) {
+        var match = st.wallets.filter(function (w) { return w.id === tx.method; })[0];
+        tx.walletId = match ? match.id : fallbackWallet;
+      }
+    });
+    return st;
+  }
+
+  /* ======================================================================
+     3.4b  v4 · INDEXEDDB — a tiny promise wrapper (no libraries)
+     ----------------------------------------------------------------------
+     Why IndexedDB: it survives far larger data sets than localStorage, is
+     never cleared by the "clear site data" size pressure as readily, and
+     supports navigator.storage.persist(). The app keeps a full in-memory
+     copy (S) so every read stays synchronous and fast — IndexedDB is only
+     ever touched on write and once at startup.
+     ====================================================================== */
+  var IDB = { name: 'hisab-db', ver: 1, store: 'kv', appKey: 'state', db: null };
+
+  function idbOpen() {
+    return new Promise(function (resolve, reject) {
+      if (!('indexedDB' in window) || !window.indexedDB) { reject(new Error('no-indexeddb')); return; }
+      var req;
+      try { req = window.indexedDB.open(IDB.name, IDB.ver); } catch (err) { reject(err); return; }
+      req.onupgradeneeded = function () {
+        var db = req.result;
+        if (!db.objectStoreNames.contains(IDB.store)) db.createObjectStore(IDB.store);
       };
-      var st = Object.assign(base, parsed);
-      st.settings = Object.assign(freshSettings(), parsed.settings || {});
-      if (!Array.isArray(st.categories) || !st.categories.length) {
-        st.categories = DEFAULT_CATEGORIES.map(function (c) { return Object.assign({}, c, { custom: false }); });
+      req.onsuccess = function () { IDB.db = req.result; resolve(req.result); };
+      req.onerror = function () { reject(req.error || new Error('idb-open-failed')); };
+      req.onblocked = function () { reject(new Error('idb-blocked')); };
+    });
+  }
+
+  /** run one request in a transaction and resolve with its result */
+  function idbDo(mode, fn) {
+    return new Promise(function (resolve, reject) {
+      var db = IDB.db;
+      if (!db) { reject(new Error('idb-closed')); return; }
+      var tx, store, out;
+      try {
+        tx = db.transaction(IDB.store, mode);
+        store = tx.objectStore(IDB.store);
+        out = fn(store);
+      } catch (err) { reject(err); return; }
+      tx.oncomplete = function () { resolve(out && out.result !== undefined ? out.result : out); };
+      tx.onabort = tx.onerror = function () { reject(tx.error || new Error('idb-tx-failed')); };
+    });
+  }
+
+  function idbGet(key)       { return idbDo('readonly',  function (s) { return s.get(key); }); }
+  function idbSet(key, val)  { return idbDo('readwrite', function (s) { return s.put(val, key); }); }
+  function idbDelete(key)    { return idbDo('readwrite', function (s) { return s.delete(key); }); }
+  function idbGetAll()       { return idbDo('readonly',  function (s) { return s.getAll(); }); }
+
+  /* ======================================================================
+     3.4c  v4 · STORE — memory cache + IndexedDB + legacy fallback
+     ====================================================================== */
+  var STORE_READY = false;      /* true once IndexedDB answered at least once */
+  var PENDING_WRITE = false;    /* a save arrived before the store was ready */
+  var LEGACY_KEY = 'hisab.state.v1';      /* pre-v4 location (kept as fallback) */
+  var MIGRATED_KEY = 'hisab.migrated.v1'; /* marker: migration finished + verified */
+  var SAFETY_KEY = 'hisab.safety.v1';     /* hidden copy of the old data */
+  var SAFETY_TS_KEY = 'hisab.safety.ts';
+  var SAFETY_DAYS = 30;
+  var LAST_SAVE_KEY = 'hisab.lastSaveTs';
+
+  /** write the whole state; never throws into the caller */
+  function storeWrite(payload) {
+    if (!STORE_READY) { PENDING_WRITE = true; return; }
+    idbSet(IDB.appKey, payload).then(function () {
+      try { localStorage.setItem(LAST_SAVE_KEY, String(Date.now())); } catch (err) {}
+    }).catch(function () {
+      /* genuine failure — fall back to localStorage so nothing is lost, and
+         tell the user in Bangla rather than failing silently */
+      try {
+        localStorage.setItem(LEGACY_KEY, JSON.stringify(payload));
+        toast(t('store_fallback'), 'warn');
+      } catch (err2) {
+        toast(t('store_failed'), 'warn');
       }
-      if (!Array.isArray(st.txs)) st.txs = [];
-      if (!Array.isArray(st.people)) st.people = [];
-      if (!Array.isArray(st.entries)) st.entries = [];
-      if (!st.budgets || typeof st.budgets !== 'object') st.budgets = {};
-      /* guarantee the 'other' fallback category exists */
-      if (!st.categories.some(function (c) { return c.id === 'other'; })) {
-        st.categories.push(Object.assign({}, DEFAULT_CATEGORIES[9], { custom: false }));
+    });
+  }
+
+  /** persist (best-effort; private mode / quota may throw) — API unchanged */
+  var saveTimer = null;
+  function save(immediate) {
+    if (immediate) { storeWrite(S); return; }
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { storeWrite(S); }, 180);
+  }
+
+  /**
+   * v4 migration: copy the pre-v4 localStorage state into IndexedDB.
+   * Sequence, all verified before anything is marked complete:
+   *   1. read the old blob
+   *   2. keep a hidden 30-day safety copy (once)
+   *   3. normalise, write to IndexedDB
+   *   4. READ IT BACK and compare counts
+   *   5. only then set the "migrated" marker
+   * The old localStorage entry is deliberately NOT deleted, so a user who
+   * opens v3 again still finds everything.
+   */
+  function migrateLegacyState() {
+    var raw = null;
+    try { raw = localStorage.getItem(LEGACY_KEY); } catch (err) { raw = null; }
+    if (!raw) return Promise.resolve(null);
+
+    var parsed;
+    try { parsed = JSON.parse(raw); } catch (err) {
+      warnOnce('migrate-parse', 'পুরনো ডেটা পড়া যায়নি (তারপরও নতুন করে শুরু হচ্ছে)');
+      return Promise.resolve(null);
+    }
+    var normalized = normalizeState(parsed);
+    if (!normalized) return Promise.resolve(null);
+
+    /* hidden safety copy — kept for SAFETY_DAYS, invisible to the UI */
+    try {
+      if (!localStorage.getItem(SAFETY_KEY)) {
+        localStorage.setItem(SAFETY_KEY, raw);
+        localStorage.setItem(SAFETY_TS_KEY, String(Date.now()));
       }
-      return st;
-    } catch (err) {
-      return buildSeedState();
+    } catch (err) { warnOnce('safety-copy', 'সেফটি কপি রাখা যায়নি (স্টোরেজ পূর্ণ)'); }
+
+    return idbSet(IDB.appKey, normalized)
+      .then(function () { return idbGet(IDB.appKey); })
+      .then(function (back) {
+        var ok = !!back &&
+          Array.isArray(back.txs) && back.txs.length === normalized.txs.length &&
+          Array.isArray(back.people) && back.people.length === normalized.people.length &&
+          Array.isArray(back.entries) && back.entries.length === normalized.entries.length;
+        if (!ok) {
+          warnOnce('migrate-verify', 'মাইগ্রেশন যাচাই ব্যর্থ — পুরনো ডেটা অক্ষত আছে');
+        } else {
+          try {
+            localStorage.setItem(MIGRATED_KEY, JSON.stringify({
+              at: Date.now(), txs: normalized.txs.length,
+              people: normalized.people.length, entries: normalized.entries.length
+            }));
+          } catch (err) {}
+        }
+        return normalized;
+      })
+      .catch(function () {
+        warnOnce('migrate-write', 'মাইগ্রেশন লেখা যায়নি — পুরনো ডেটা থেকে পড়া হচ্ছে');
+        return normalized;
+      });
+  }
+
+  /** drop the hidden safety copy once SAFETY_DAYS have passed */
+  function expireSafetyCopy() {
+    var ts = 0;
+    try { ts = Number(localStorage.getItem(SAFETY_TS_KEY) || 0); } catch (err) { ts = 0; }
+    if (ts && (Date.now() - ts) > SAFETY_DAYS * 86400000) {
+      try { localStorage.removeItem(SAFETY_KEY); localStorage.removeItem(SAFETY_TS_KEY); } catch (err) {}
     }
   }
 
-  /** persist (best-effort; private mode may throw) */
-  var saveTimer = null;
-  function save(immediate) {
-    if (immediate) {
-      try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (err) {}
-      return;
+  /**
+   * Load the state, in priority order:
+   *   IndexedDB  →  (migrate) localStorage  →  sample data
+   * Always resolves — a storage failure must never block the app.
+   */
+  function loadState() {
+    return idbOpen()
+      .then(function () {
+        return idbGet(IDB.appKey);
+      })
+      .then(function (existing) {
+        if (existing && typeof existing === 'object') {
+          STORE_READY = true;
+          var normalized = normalizeState(existing) || buildSeedState();
+          expireSafetyCopy();
+          return normalized;
+        }
+        /* nothing in IndexedDB yet — migrate an old v3 install if there is one */
+        return migrateLegacyState().then(function (migrated) {
+          STORE_READY = true;
+          if (migrated) {
+            try { localStorage.setItem('hisab.justMigrated', '1'); } catch (err) {}
+            return migrated;
+          }
+          /* brand-new install: has the user seen onboarding before? */
+          var hadLegacy = false;
+          try { hadLegacy = !!localStorage.getItem(LEGACY_KEY); } catch (err) {}
+          var seeded = buildSeedState();
+          seeded.settings.onboarded = hadLegacy;   /* never re-onboard an existing user */
+          return seeded;
+        });
+      })
+      .catch(function () {
+        /* IndexedDB unavailable (private mode, file://) — fall back to the
+           old localStorage path so the app still opens and still saves */
+        warnOnce('idb-unavailable', 'IndexedDB পাওয়া যায়নি — localStorage ব্যবহার হচ্ছে');
+        STORE_READY = false;
+        var raw = null;
+        try { raw = localStorage.getItem(LEGACY_KEY); } catch (err) { raw = null; }
+        if (raw) {
+          try {
+            var norm = normalizeState(JSON.parse(raw));
+            if (norm) return norm;
+          } catch (err2) { /* fall through to seed */ }
+        }
+        return buildSeedState();
+      });
+  }
+
+  /* ======================================================================
+     3.4d  v4 · PROTECTED STORAGE + USAGE ESTIMATE
+     ====================================================================== */
+  function initPersist() {
+    if (!navigator.storage || !navigator.storage.persist) {
+      S.settings.persistSupported = false;
+      return Promise.resolve(false);
     }
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(function () {
-      try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (err) {}
-    }, 180);
+    S.settings.persistSupported = true;
+    return navigator.storage.persisted()
+      .then(function (already) {
+        if (already) return true;
+        return navigator.storage.persist();
+      })
+      .then(function (granted) {
+        S.settings.storagePersisted = !!granted;
+        save();
+        return granted;
+      })
+      .catch(function () { return false; });
+  }
+
+  function refreshEstimate() {
+    if (!navigator.storage || !navigator.storage.estimate) return Promise.resolve(null);
+    return navigator.storage.estimate().then(function (est) {
+      S.settings.storageUsage = est.usage || 0;
+      S.settings.storageQuota = est.quota || 0;
+      save();
+      return est;
+    }).catch(function () { return null; });
+  }
+
+  function fmtBytes(n) {
+    n = Number(n) || 0;
+    if (n < 1024) return num(n.toFixed(0)) + ' B';
+    if (n < 1048576) return num((n / 1024).toFixed(1)) + ' KB';
+    return num((n / 1048576).toFixed(2)) + ' MB';
   }
 
   /* -------- lookups -------- */
@@ -2732,18 +3853,73 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     if (!skipRender) renderCurrent(true);
   }
 
+  /*
+   * v4 · CHANGELOG — the live list shown in Settings › About › নতুন কী আছে.
+   * Bengali first, English second, newest release on top.
+   */
+  var CHANGELOG = [
+    { v: '2.0.0', d: '৯ অক্টোবর ২০২৬', items: [
+      'ডেটা এখন IndexedDB-তে — পুরনো সব হিসাব স্বয়ংক্রিয়ভাবে সরানো হয়, কিছুই হারায় না',
+      '“সুরক্ষিত স্টোরেজ” চালু — ব্রাউজার আর নিজে থেকে ডেটা মুছবে না',
+      'ব্যাকআপ রিমাইন্ডার — ৩ / ৭ / ১৫ / ৩০ দিন পরপর মনে করিয়ে দেবে',
+      'ব্যাকআপ ফাইলে তারিখ ও ভার্সন থাকে; ফিরিয়ে আনার সময় রিপ্লেস বা মার্জ করা যায়',
+      '🎙️ ভয়েস ইনপুট — “বাজার ৫০০ টাকা” বললেই হিসাব লেখা হয়ে যায়',
+      '🔁 রিকারিং এন্ট্রি — বাসা ভাড়া, ইন্টারনেট বিল, বেতন স্বয়ংক্রিয়ভাবে যোগ হয়',
+      '👛 একাধিক ওয়ালেট — ক্যাশ, বিকাশ, নগদ, রকেট, ব্যাংক ও নিজের বানানো ওয়ালেট',
+      'ওয়ালেট ট্রান্সফার — আয়/খরচের হিসাব না বদলেই টাকা সরানো যায়',
+      '🔔 বাকির রিমাইন্ডার — WhatsApp, SMS বা টেলিগ্রামে ভদ্র বার্তা পাঠান',
+      'বাকির মেয়াদ তারিখ ও “মেয়াদ পার” সতর্কতা',
+      '🏪 দোকান মোড — স্টক, বিক্রি, ইনভয়েস, লাভ ও দোকানের রিপোর্ট',
+      'লম্বা লেনদেনের তালিকা এখন ৩০টি করে লোড হয় — পুরনো ফোনেও দ্রুত',
+      'স্ট্যান্ডঅ্যালোন মোডে উপরের ফাঁকা জায়গার সমস্যা ঠিক করা হয়েছে',
+      'নতুন স্প্ল্যাশ স্ক্রিন ও ৩ ধাপের পরিচিতি',
+      'অ্যাপ সম্পর্কে পর্দা, ফিডব্যাক বোতাম আর গোপন ইস্টার এগ'
+    ] },
+    { v: '1.0.0', d: 'আগের সংস্করণ', items: [
+      'আয়, খরচ, বাকি ও রিপোর্ট — সব একসাথে',
+      'সাইলেন্ট কনফেটি, গ্লাস সামারি উইজেট ও অ্যানিমেশন',
+      'PIN লক, ব্যাকআপ এবং সম্পূর্ণ অফলাইন ব্যবহার'
+    ] }
+  ];
+
   /* ======================================================================
      3.7  ROUTER — tabs, top bar, scroll collapse
      ====================================================================== */
-  var VIEWS = ['home', 'tx', 'ledger', 'reports', 'settings'];
+  var VIEWS = ['home', 'tx', 'ledger', 'reports', 'shop', 'settings'];
 
   var TOPBAR_TITLES = {
     home:     ['home_title', 'home_eyebrow'],
     tx:       ['tx_title', 'tx_eyebrow'],
     ledger:   ['led_title', 'led_eyebrow'],
     reports:  ['rep_title', 'rep_eyebrow'],
+    shop:     ['tab_shop', 'shop_eyebrow'],
     settings: ['set_title', 'set_eyebrow']
   };
+
+  /** the tabs actually on screen right now (shop disappears in personal mode) */
+  function visibleTabs() {
+    return $$('.tab').filter(function (b) { return b.offsetParent !== null; });
+  }
+
+  /**
+   * v4 · shop mode switch. Flips the body flag (which drives the 5↔6 column
+   * grid and the sliding pill width in CSS) and re-routes the tabs.
+   */
+  function applyShopMode(on) {
+    S.settings.shopMode = !!on;
+    document.body.setAttribute('data-shop', on ? 'true' : 'false');
+    if (!on && UI.view === 'shop') UI.view = 'home';
+    document.body.setAttribute('data-view', UI.view);
+    VIEWS.forEach(function (v) {
+      var el = document.getElementById('view-' + v);
+      if (el) el.classList.toggle('active', v === UI.view);
+    });
+    $$('.tab').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-go') === UI.view);
+    });
+    positionTabPill(UI.view);
+    save();
+  }
 
   function setTopbar(view) {
     var conf = TOPBAR_TITLES[view] || TOPBAR_TITLES.home;
@@ -2755,12 +3931,19 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
   function positionTabPill(view) {
     var pill = $('#tabPill');
     if (!pill) return;
-    var i = VIEWS.indexOf(view);
-    if (i < 0) i = 0;
+    /* index among VISIBLE tabs, so hiding the shop tab still lines the pill up
+       correctly on a 5-column bar */
+    var vis = visibleTabs();
+    var i = 0;
+    for (var k = 0; k < vis.length; k++) {
+      if (vis[k].getAttribute('data-go') === view) { i = k; break; }
+    }
     pill.style.transform = 'translateX(' + (i * 100) + '%)';
   }
 
   function go(view) {
+    /* the shop view only exists in দোকান মোড */
+    if (view === 'shop' && !shopOn()) view = 'home';
     if (VIEWS.indexOf(view) === -1) view = 'home';
     UI.view = view;
     document.body.setAttribute('data-view', view);
@@ -3357,6 +4540,8 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     var note = txNote(tx);
     var sub = catName(cat) + ' <span class="sep">·</span> ' + methodName(m) +
               (note ? ' <span class="sep">·</span> ' + esc(note) : '');
+    /* v4 · recurring marker so auto-created rows are recognisable */
+    if (tx.recurring) sub = '<span class="badge rec">🔁</span> ' + sub;
     var sign = isIn ? '+' : '−';
     var row = '<button class="tx-row" type="button" data-act="tx-open" data-id="' + tx.id + '" ' +
       'aria-label="' + esc(catName(cat)) + ' ' + esc(money(tx.amount)) + '">' +
@@ -3598,6 +4783,14 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
 
     var html = widgetHTML();
 
+    /* ---------- v4 · wallet balances carousel ---------- */
+    html += '<div class="sec-head"><span class="sec-title">' + esc(t('wallet_balances')) + '</span>' +
+      '<button class="sec-link" type="button" data-act="open-transfer">⇄ ' + esc(t('wallet_transfer')) + '</button></div>';
+    html += walletsHTML();
+
+    /* ---------- v4 · backup reminder (configurable, hides when fresh) ---------- */
+    html += backupBannerHTML();
+
     /* ---------- hero (parallax tilt target) ---------- */
     html += '<div class="card hero" id="heroCard">' +
       '<div class="hero-label">' + esc(t('total_balance')) + '</div>' +
@@ -3624,6 +4817,19 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
       '<button class="qbtn q-cr" type="button" data-act="open-ledger">' +
         '<span class="q-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H17a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M4 17h15"/></svg></span>' +
         '<span class="q-tx">' + esc(t('q_credit')) + '</span></button>' +
+    '</div>';
+
+    /* ---------- v4 quick row: voice, transfer, recurring ---------- */
+    html += '<div class="quick">' +
+      '<button class="qbtn q-in" type="button" data-act="open-voice">' +
+        '<span class="q-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></span>' +
+        '<span class="q-tx">' + esc(t('mic')) + '</span></button>' +
+      '<button class="qbtn q-cr" type="button" data-act="open-transfer">' +
+        '<span class="q-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg></span>' +
+        '<span class="q-tx">' + esc(t('wallet_transfer')) + '</span></button>' +
+      '<button class="qbtn q-ex" type="button" data-act="open-recurring">' +
+        '<span class="q-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6"/><path d="M18 3v3.4h-3.4M6 21v-3.4h3.4"/></svg></span>' +
+        '<span class="q-tx">' + esc(t('recur_title')) + '</span></button>' +
     '</div>';
 
     /* ---------- donut: expense by category this month ---------- */
@@ -3771,11 +4977,19 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
       html += '<div class="card mt16">' + emptyHTML('🔍', t('no_match'), t('no_match_sub')) + '</div>';
     } else {
       html += '<p style="font-size:11.5px;color:var(--text-3);text-align:center;margin:16px 0 4px;">' + esc(t('swipe_hint')) + '</p>';
-      html += '<div id="txListHost">' + txListHTML(list, true) + '</div>';
+      /* v4 · render only the first 30 rows, then load more as you scroll.
+         A 2000-row ledger stays instant on a low-end phone. */
+      var head = list.slice(0, UI.txLimit || 30);
+      html += '<div id="txListHost">' + txListHTML(head, true) + '</div>';
+      if (list.length > head.length) {
+        html += '<div id="txMore" style="padding:18px 0 6px;text-align:center;font-size:12.5px;color:var(--text-3)">' +
+          num(String(list.length - head.length)) + ' …</div>';
+      }
     }
 
     host.innerHTML = html;
     bindSwipes(host);
+    bindLoadMore();
 
     /* keep the caret where the user was typing */
     var search = $('#txSearch');
@@ -3786,6 +5000,76 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
   }
 
   /* ---- swipe gestures on transaction rows ---- */
+  /**
+   * v4 · infinite scroll. An IntersectionObserver on a sentinel element grows
+   * the render window by 30 rows at a time — no full re-render, no jank.
+   */
+  function bindLoadMore() {
+    var more = $('#txMore');
+    if (!more || typeof IntersectionObserver === 'undefined') return;
+    var obs = new IntersectionObserver(function (entries) {
+      if (!entries[0] || !entries[0].isIntersecting) return;
+      obs.disconnect();
+      UI.txLimit = (UI.txLimit || 30) + 30;
+      UI.txSearchFocus = false;      /* never steal focus back mid-scroll */
+      renderTx();
+    }, { rootMargin: '320px 0px' });
+    obs.observe(more);
+  }
+
+  /* v4 · the import picker is created on demand, so the body needs no extra
+     markup and the file input is guaranteed to exist before it is clicked. */
+  function bindImportInput() {
+    var fi = $('#importFile');
+    if (!fi) {
+      fi = document.createElement('input');
+      fi.type = 'file';
+      fi.id = 'importFile';
+      fi.accept = 'application/json,.json';
+      fi.style.display = 'none';
+      document.body.appendChild(fi);
+    }
+    if (fi.__bound) return;
+    fi.__bound = true;
+    fi.addEventListener('change', function () {
+      var f = fi.files && fi.files[0];
+      if (f) handleImportFile(f);
+      fi.value = '';   /* allow re-picking the same file */
+    });
+  }
+
+  /* v4 · baki reminder channels for one person */
+  function openRemindChoices(personId) {
+    var p = personById(personId);
+    if (!p) return;
+    var bal = personBalance(p.id);
+    var msg = reminderMessage(p, bal, personDueDate(p.id));
+    var enc = encodeURIComponent(msg);
+    haptic('light');
+
+    if (p.phone) {
+      var wa = 'https://wa.me/' + waNumber(p.phone) + '?text=' + enc;
+      try { window.open(wa, '_blank', 'noopener'); } catch (err) { copyText(msg, 'copied'); }
+      return;
+    }
+    /* no number on file — offer Telegram (needs no username) and a copy */
+    askConfirm({
+      title: t('reminder'),
+      body: msg + '\n\n(' + t('no_phone') + ')',
+      okText: 'Telegram',
+      cancelText: t('copied'),
+      danger: false,
+      onOk: function () {
+        try { window.open('https://t.me/share/url?url=' + encodeURIComponent(location.host) + '&text=' + enc, '_blank', 'noopener'); } catch (e) { copyText(msg, 'copied'); }
+      }
+    });
+    var noBtn = document.getElementById('confirmNo');
+    if (noBtn) {
+      var h = function () { noBtn.removeEventListener('click', h); copyText(msg, 'copied'); };
+      noBtn.addEventListener('click', h);
+    }
+  }
+
   function bindSwipes(root) {
     $$('.swipe-wrap', root).forEach(function (wrap) {
       var row = wrap.querySelector('.tx-row');
@@ -3846,6 +5130,8 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
           categoryId: existing.categoryId,
           date: existing.date,
           method: existing.method,
+          walletId: existing.walletId || existing.method || 'cash',
+          repFreq: 'none',
           note: txNote(existing),
           noteBn: existing.noteBn || '',
           noteEn: existing.noteEn || ''
@@ -3857,6 +5143,8 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
           categoryId: null,
           date: todayIso(),
           method: 'cash',
+          walletId: (S.wallets[0] || {}).id || 'cash',
+          repFreq: 'none',
           note: '',
           noteBn: '',
           noteEn: ''
@@ -3941,6 +5229,23 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
       }).join('');
     }
 
+    /* v4 · wallet for this transaction (mirrors the method by default) */
+    var wHost = $('#txWalletChips');
+    if (wHost) {
+      wHost.innerHTML = S.wallets.map(function (w) {
+        return '<button class="chip' + (w.id === d.walletId ? ' on' : '') + '" type="button" data-act="tx-wallet" data-v="' + w.id + '">' +
+          esc(w.emoji + ' ' + walletName(w)) + '</button>';
+      }).join('');
+    }
+
+    /* v4 · repeat (creates a recurring rule on save) */
+    var rHost = $('#txRepChips');
+    if (rHost) {
+      rHost.innerHTML = freqs().map(function (f) {
+        return '<button class="chip' + ((d.repFreq || 'none') === f[0] ? ' on' : '') + '" type="button" data-act="tx-rep" data-v="' + f[0] + '">' + esc(t(f[1])) + '</button>';
+      }).join('');
+    }
+
     /* note */
     var noteEl = $('#txNote');
     if (noteEl) noteEl.value = d.note || '';
@@ -4016,11 +5321,25 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
         categoryId: d.categoryId,
         date: d.date,
         method: d.method,
+        walletId: d.walletId || d.method || 'cash',
         noteBn: d.note,
         noteEn: '',
         createdAt: Date.now()
       });
       toast(t('tx_saved'));
+    }
+
+    /* v4 · if a repeat was chosen, register a rule and materialise it. The
+       rule starts from this entry's date, so it is not duplicated today. */
+    if (d.repFreq && d.repFreq !== 'none' && !d.id) {
+      S.recurring.push({
+        id: uid('rc'), title: d.note || catName(catById(d.categoryId)),
+        type: d.type, amount: Math.round(amt * 100) / 100,
+        freq: d.repFreq, interval: 1, start: d.date, end: null,
+        categoryId: d.categoryId, walletId: d.walletId || d.method || 'cash',
+        paused: false, lastRun: d.date, createdAt: Date.now()
+      });
+      toast(t('recur_added'));
     }
     save();
     haptic('success');
@@ -4153,6 +5472,10 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     var wa = 'https://wa.me/' + phoneDigits(p.phone) + '?text=' + encodeURIComponent(msg);
     var sm = 'sms:' + String(p.phone || '').replace(/\s/g, '') + '?body=' + encodeURIComponent(msg);
     html += '<div class="chips" style="margin-bottom:6px;">';
+    var dueState = overdueState(p.id);
+    if (bal > 0) {
+      html += '<button class="chip" type="button" data-act="remind" data-id="' + p.id + '">🔔 ' + esc(t('reminder')) + '</button>';
+    }
     if (p.phone) {
       html += '<a class="chip" href="' + esc(sm) + '">💬 ' + esc(t('send_sms')) + '</a>';
       html += '<a class="chip" href="' + esc(wa) + '" target="_blank" rel="noopener noreferrer">🟢 ' + esc(t('send_whatsapp')) + '</a>';
@@ -4161,6 +5484,10 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
       html += '<span class="chip" style="opacity:.6">' + esc(t('no_phone')) + '</span>';
     }
     html += '<button class="chip" type="button" data-act="copy-reminder" data-id="' + p.id + '">📋 ' + esc(t('reminder')) + '</button>';
+    if (dueState) {
+      html += '<span class="chip" style="border-color:var(--expense);color:var(--expense)">' +
+        (dueState === 'overdue' ? '⚠️ ' + esc(t('overdue')) : '⏰ ' + esc(t('due_soon'))) + '</span>';
+    }
     html += '</div>';
 
     /* add entry form */
@@ -4339,6 +5666,11 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
       '<button class="btn btn-ghost grow" type="button" data-act="export-csv">📄 ' + esc(t('export_csv')) + '</button>' +
       '<button class="btn btn-primary grow" type="button" data-act="print-report">🖨️ ' + esc(t('print_pdf')) + '</button>' +
     '</div>';
+    /* v4 · share the report as a clean PDF (print) or as a text summary */
+    html += '<div class="row mt12 no-print" style="gap:10px;">' +
+      '<button class="btn btn-ghost grow" type="button" data-act="share-report">📤 ' + esc(t('share_report')) + '</button>' +
+      '<button class="btn btn-ghost grow" type="button" data-act="pdf-report">🖨️ ' + esc(t('pdf_report')) + '</button>' +
+    '</div>';
     html += '<p style="font-size:11.5px;color:var(--text-3);text-align:center;margin:10px 0 0;" class="no-print">' + esc(t('print_hint')) + '</p>';
 
     host.innerHTML = html;
@@ -4476,6 +5808,19 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
 
     html += switchRow('toggle-celebrate', '🎉', t('celebrate'), t('celebrate_sub'), st.celebrate !== false);
 
+    /* ---------- v4 · দোকান মোড, recurring, message template ---------- */
+    html += switchRow('shop-toggle', '🏪', t('shop_mode'), t('shop_mode_sub'), !!st.shopMode);
+    html += choiceRow('open-recurring', '🔁', t('recur_title'), t('recur_sub'), num(String(S.recurring.length)));
+    html += choiceRow('msg-edit', '✉️', t('msg_template'), t('msg_template_sub'), UI.msgEdit ? t('close') : '›');
+    if (UI.msgEdit) {
+      html += '<div style="padding:0 4px 14px;">' +
+        '<textarea class="input" id="msgArea" rows="3" style="min-height:88px;line-height:1.6;padding:12px;">' +
+          esc(st.messageTemplate || DEFAULT_MESSAGE_TEMPLATE) + '</textarea>' +
+        '<p style="font-size:11.5px;color:var(--text-3);margin:7px 2px 10px;line-height:1.7">' + esc(t('msg_hint')) + '</p>' +
+        '<button class="btn btn-primary btn-block" type="button" data-act="msg-save">' + esc(t('save')) + '</button>' +
+      '</div>';
+    }
+
     /* PWA install row — only meaningful when the app is not already installed */
     if (!PWA.installed && !isStandalone()) {
       html += '<button class="set-item" type="button" data-act="pwa-install" style="width:100%;text-align:left">' +
@@ -4543,6 +5888,10 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     html += '<button class="set-item" type="button" data-act="restore" style="width:100%;text-align:left">' +
       '<span class="si-ic">⬆️</span><span class="si-t"><span class="si-l">' + esc(t('restore')) + '</span>' +
       '<span class="si-s">' + esc(t('restore_sub')) + '</span></span><span class="set-val">›</span></button>';
+    /* v4 · how often to be reminded, and the last backup date */
+    html += choiceRow('backup-days', '⏰', t('backup_remind'),
+      (daysSinceBackup() === null ? t('backup_never') : t('backup_ago', { n: String(num(daysSinceBackup())) })),
+      (st.backupRemindDays ? num(String(st.backupRemindDays)) : t('off')));
     html += '<button class="set-item" type="button" data-act="clear-sample" style="width:100%;text-align:left">' +
       '<span class="si-ic">🧹</span><span class="si-t"><span class="si-l">' + esc(t('clear_sample')) + '</span>' +
       '<span class="si-s">' + esc(t('clear_sample_sub')) + '</span></span><span class="set-val">›</span></button>';
@@ -4552,20 +5901,28 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
       '<span class="si-s">' + esc(t('reset_sub')) + '</span></span><span class="set-val">›</span></button>';
     html += '</div>';
 
-    /* ---------- about ---------- */
-    var bytes = 0;
-    try { bytes = (localStorage.getItem(STORE_KEY) || '').length; } catch (err) { bytes = 0; }
+    /* ---------- about (v4) ---------- */
     html += '<div class="sec-head"><span class="sec-title">' + esc(t('about')) + '</span></div>';
-    html += '<div class="card set-group">' +
-      '<div class="set-item"><span class="si-ic">🧮</span>' +
-        '<span class="si-t"><span class="si-l">' + esc(t('about_sub')) + '</span>' +
-        '<span class="si-s">' + esc(t('version')) + ' ' + num('1.0.0') + '</span></span></div>' +
-      '<div class="set-item"><span class="si-ic">💾</span>' +
-        '<span class="si-t"><span class="si-l">' + esc(t('storage_used')) + '</span>' +
-        '<span class="si-s">' + num((bytes / 1024).toFixed(1)) + ' KB · ' + num(S.txs.length) + ' ' + esc(t('transactions_count')) + '</span></span></div>' +
-      '<div class="set-item"><span class="si-ic">📴</span>' +
-        '<span class="si-t"><span class="si-l">' + esc(t('about_sub')) + '</span></span></div>' +
-    '</div>';
+    html += '<div class="card set-group">';
+    html += '<button class="set-item" type="button" data-act="open-about" style="width:100%;text-align:left">' +
+      '<span class="si-ic">🧮</span>' +
+      '<span class="si-t"><span class="si-l">' + esc(t('about_sub')) + '</span>' +
+      '<span class="si-s">' + esc(APP_NAME) + ' · ' + esc(t('version')) + ' ' + esc(APP_VERSION) + '</span></span>' +
+      '<span class="set-val">›</span></button>';
+    /* protected-storage state + the real usage figure from the Storage API */
+    html += '<div class="set-item"><span class="si-ic">🛡️</span>' +
+      '<span class="si-t"><span class="si-l">' + esc(t('protected_storage')) + '</span>' +
+      '<span class="si-s">' + esc('IndexedDB · ' + (st.storagePersisted ? t('on') : t('off'))) + '</span></span>' +
+      '<span class="set-val">' + (st.storagePersisted ? '✓' : '—') + '</span></div>';
+    html += '<div class="set-item"><span class="si-ic">💾</span>' +
+      '<span class="si-t"><span class="si-l">' + esc(t('storage_used')) + '</span>' +
+      '<span class="si-s">' + esc(fmtBytes(st.storageUsage)) + (st.storageQuota ? ' / ' + esc(fmtBytes(st.storageQuota)) : '') +
+      ' · ' + num(String(S.txs.length)) + ' ' + esc(t('transactions_count')) + '</span></span></div>';
+    html += '<div class="set-item"><span class="si-ic">📴</span>' +
+      '<span class="si-t"><span class="si-l">' + esc(t('offline_ready')) + '</span>' +
+      '<span class="si-s">' + esc(t('pwa_ready')) + '</span></span>' +
+      '<span class="set-val">✓</span></div>';
+    html += '</div>';
 
     host.innerHTML = html;
 
@@ -4595,6 +5952,7 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     if (v === 'tx') renderTx();
     else if (v === 'ledger') renderLedger();
     else if (v === 'reports') renderReports();
+    else if (v === 'shop') renderShop();
     else if (v === 'settings') renderSettings();
     else renderHome(animateIn !== false);
     if (UI.view !== 'settings' && UI.catManage) UI.catManage = false;
@@ -4926,6 +6284,107 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
       doInstall();
     }
 
+    /* --- v4 · wallets + transfers --- */
+    else if (act === 'open-wallet') { openWalletSheet(el.getAttribute('data-id')); }
+    else if (act === 'new-wallet') { openWalletSheet(null); }
+    else if (act === 'pick-wallet-emoji') { _walletDraft.emoji = el.getAttribute('data-v'); paintWalletSheet(); }
+    else if (act === 'pick-wallet-color') { _walletDraft.color = el.getAttribute('data-v'); paintWalletSheet(); }
+    else if (act === 'open-transfer') { openTransferSheet(); }
+    else if (act === 'tr-from') {
+      /* the target must differ from the source — nudge it if they collide */
+      _transferDraft.from = el.getAttribute('data-v');
+      if (_transferDraft.to === _transferDraft.from) {
+        var alt = S.wallets.filter(function (w) { return w.id !== _transferDraft.from; })[0];
+        if (alt) _transferDraft.to = alt.id;
+      }
+      paintTransferSheet();
+    }
+    else if (act === 'tr-to') { _transferDraft.to = el.getAttribute('data-v'); paintTransferSheet(); }
+
+    /* --- v4 · recurring --- */
+    else if (act === 'open-recurring') { openRecurSheet(); }
+    else if (act === 'recur-template') {
+      var tp = RECUR_TEMPLATES.filter(function (x) { return x.id === el.getAttribute('data-v'); })[0];
+      newRecurDraft(tp);
+    }
+    else if (act === 'recur-add') { newRecurDraft(null); }
+    else if (act === 'recur-freq') { _recurDraft.freq = el.getAttribute('data-v'); paintRecurSheet(); }
+    else if (act === 'recur-cat') { _recurDraft.categoryId = el.getAttribute('data-v'); paintRecurSheet(); }
+    else if (act === 'recur-wallet') { _recurDraft.walletId = el.getAttribute('data-v'); paintRecurSheet(); }
+    else if (act === 'recur-save') { saveRecur(); }
+    else if (act === 'recur-toggle') {
+      var rid = el.getAttribute('data-id');
+      S.recurring.forEach(function (r) { if (r.id === rid) r.paused = !r.paused; });
+      save(true); haptic('light'); paintRecurSheet();
+    }
+    else if (act === 'recur-del') {
+      var rid2 = el.getAttribute('data-id');
+      askConfirm({
+        title: t('recur_title'), body: t('prod_delete_sub'), okText: t('delete'),
+        onOk: function () {
+          /* remove the rule but keep the entries it already created */
+          S.recurring = S.recurring.filter(function (r) { return r.id !== rid2; });
+          save(true); toast(t('delete')); paintRecurSheet(); renderCurrent(false);
+        }
+      });
+    }
+
+    /* --- v4 · voice --- */
+    else if (act === 'open-voice') { openVoiceSheet(); }
+
+    /* --- v4 · backup + import --- */
+    else if (act === 'backup-now') { exportBackup(); }
+    else if (act === 'backup-days') {
+      var seq = [0, 3, 7, 15, 30];
+      var next = seq[(seq.indexOf(Number(S.settings.backupRemindDays)) + 1) % seq.length];
+      S.settings.backupRemindDays = next;
+      save(true); haptic('light'); renderSettings();
+    }
+
+    /* --- v4 · about --- */
+    else if (act === 'open-about') { openAbout(); }
+    else if (act === 'cl-toggle') {
+      var item = el.closest('.cl-item');
+      if (item) item.classList.toggle('open');
+      haptic('light');
+    }
+    else if (act === 'feedback') { sendFeedback(); }
+    else if (act === 'share-app') { shareApp(); }
+
+    /* --- v4 · shop mode --- */
+    else if (act === 'shop-toggle' || act === 'shop-on') {
+      var on = !S.settings.shopMode;
+      applyShopMode(on);
+      haptic('success');
+      toast(t('shop_mode') + (on ? ' ✓' : ''));
+      renderCurrent(true);
+      if (on) go('shop');
+    }
+    else if (act === 'new-product') { openProductSheet(null); }
+    else if (act === 'open-product') { openProductSheet(el.getAttribute('data-id')); }
+    else if (act === 'new-sale') { openSaleSheet(null); }
+    else if (act === 'shop-report') { go('reports'); }
+    else if (act === 'sale-add') { saleAdd(el.getAttribute('data-id')); }
+    else if (act === 'sale-inc') {
+      var ii = Number(el.getAttribute('data-i'));
+      if (_saleDraft && _saleDraft.items[ii]) { _saleDraft.items[ii].qty += 1; haptic('light'); paintSaleSheet(); }
+    }
+    else if (act === 'sale-dec') {
+      var ij = Number(el.getAttribute('data-i'));
+      if (_saleDraft && _saleDraft.items[ij]) {
+        _saleDraft.items[ij].qty -= 1;
+        if (_saleDraft.items[ij].qty <= 0) _saleDraft.items.splice(ij, 1);
+        haptic('light'); paintSaleSheet();
+      }
+    }
+    else if (act === 'sale-cust') { _saleDraft.customerId = el.getAttribute('data-v') || null; paintSaleSheet(); }
+    else if (act === 'open-receipt') { openReceipt(el.getAttribute('data-id')); }
+    else if (act === 'receipt-print') { printReceipt(); }
+    else if (act === 'receipt-share') { shareReceipt(); }
+
+    /* --- v4 · baki reminder (WhatsApp / SMS / Telegram) --- */
+    else if (act === 'remind') { openRemindChoices(el.getAttribute('data-id')); }
+
     /* --- home / general --- */
     if (act === 'quick-add') {
       openTxSheet(null, el.getAttribute('data-type') === 'income' ? 'income' : 'expense');
@@ -5018,6 +6477,8 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     /* --- reports --- */
     else if (act === 'export-csv') { exportCSV(); }
     else if (act === 'print-report') { printReport(); }
+    else if (act === 'share-report') { shareReport(UI.repPeriod); }
+    else if (act === 'pdf-report') { printReportPaper(); }
     else if (act === 'edit-budget') { openBudgetSheet(); }
 
     /* --- settings --- */
@@ -5040,8 +6501,7 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     } else if (act === 'change-pin') {
       showSetPin();
     } else if (act === 'backup') {
-      var okB = download('hisab-backup-' + todayIso() + '.json', JSON.stringify(S, null, 2), 'application/json');
-      toast(okB ? t('export_done') : t('import_bad'), okB ? 'ok' : 'warn');
+      exportBackup();
     } else if (act === 'restore') {
       var fi = $('#importFile');
       if (fi) fi.click();
@@ -5068,6 +6528,30 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
           go('home');
         }
       });
+    }
+
+    /* --- v4 · message template editor --- */
+    else if (act === 'msg-edit') {
+      UI.msgEdit = !UI.msgEdit;
+      haptic('light');
+      renderSettings();
+    } else if (act === 'msg-save') {
+      var area = document.getElementById('msgArea');
+      var v = area ? String(area.value).trim() : '';
+      if (!v) { toast(t('msg_template') + '?', 'warn'); return; }
+      S.settings.messageTemplate = v;
+      save(true); haptic('success'); UI.msgEdit = false;
+      toast(t('saved'));
+      renderSettings();
+    }
+
+    /* --- v4 · add-sheet repeat + wallet --- */
+    else if (act === 'tx-rep') {
+      UI.txDraft.repFreq = el.getAttribute('data-v');
+      paintTxSheet();
+    } else if (act === 'tx-wallet') {
+      UI.txDraft.walletId = el.getAttribute('data-v');
+      paintTxSheet();
     }
 
     /* All segmented controls (theme / language / tx type / report period / ledger
@@ -5117,8 +6601,14 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     if (tgt.id === 'txSearch') {
       UI.txFilter.q = tgt.value;
       UI.txSearchFocus = true;
-      renderTx();
-      UI.txSearchFocus = false;
+      UI.txLimit = 30;                 /* a new search resets the pages */
+      /* v4 · debounce 200ms so typing on a slow phone never re-renders per key */
+      clearTimeout(UI.searchTimer);
+      UI.searchTimer = setTimeout(function () {
+        if (UI.view !== 'tx') { UI.txSearchFocus = false; return; }
+        renderTx();
+        UI.txSearchFocus = false;
+      }, 200);
     } else if (tgt.id === 'txNote' && UI.txDraft) {
       UI.txDraft.note = tgt.value;
     } else if (tgt.id === 'txDate' && UI.txDraft) {
@@ -5137,6 +6627,22 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
   /* sheet save buttons */
   var txSaveEl = $('#txSaveBtn');
   if (txSaveEl) txSaveEl.addEventListener('click', saveTxFromSheet);
+  var walletSaveEl = $('#walletSaveBtn');
+  if (walletSaveEl) walletSaveEl.addEventListener('click', saveWalletFromSheet);
+  var walletDelEl = $('#walletDeleteBtn');
+  if (walletDelEl) walletDelEl.addEventListener('click', deleteWallet);
+  var transferSaveEl = $('#transferSaveBtn');
+  if (transferSaveEl) transferSaveEl.addEventListener('click', doTransfer);
+  var prodSaveEl = $('#prodSaveBtn');
+  if (prodSaveEl) prodSaveEl.addEventListener('click', saveProduct);
+  var prodDelEl = $('#prodDeleteBtn');
+  if (prodDelEl) prodDelEl.addEventListener('click', deleteProduct);
+  var saleSaveEl = $('#saleSaveBtn');
+  if (saleSaveEl) saleSaveEl.addEventListener('click', saveSale);
+  var voiceAgainEl = $('#voiceAgain');
+  if (voiceAgainEl) voiceAgainEl.addEventListener('click', function () { haptic('light'); startVoice(); });
+  var voiceSaveEl = $('#voiceSave');
+  if (voiceSaveEl) voiceSaveEl.addEventListener('click', voiceToTxSheet);
   var txDelEl = $('#txDeleteBtn');
   if (txDelEl) {
     txDelEl.addEventListener('click', function () {
@@ -5241,6 +6747,1513 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
       if (el) positionSegPill(el, pair[1] < 0 ? 0 : pair[1]);
     });
   });
+
+  /* ======================================================================
+     3.10b  v4 · WALLETS / ACCOUNTS (একাধিক ওয়ালেট)
+     ====================================================================== */
+  function walletById(id) {
+    for (var i = 0; i < S.wallets.length; i++) if (S.wallets[i].id === id) return S.wallets[i];
+    return S.wallets[0] || { id: 'cash', bn: 'ক্যাশ', en: 'Cash', emoji: '💵', color: '#34C759' };
+  }
+  function walletName(w) { return (S.settings.lang === 'en' && w.en) ? w.en : (w.bn || w.en || ''); }
+
+  /**
+   * Balance of one wallet = opening + every tx on it −/＋ transfers.
+   * Transfers are stored in S.transfers (NOT in S.txs) on purpose: that keeps
+   * the income/expense totals, reports, budgets and the monthly widget
+   * completely untouched, so moving money between wallets can never distort
+   * a single existing figure.
+   */
+  function walletBalance(id) {
+    var w = walletById(id);
+    var bal = Number(w && w.opening) || 0;
+    S.txs.forEach(function (tx) {
+      if (tx.walletId !== id) return;
+      bal += (tx.type === 'income' ? 1 : -1) * (Number(tx.amount) || 0);
+    });
+    (S.transfers || []).forEach(function (tr) {
+      if (tr.fromWallet === id) bal -= Number(tr.amount) || 0;
+      if (tr.toWallet === id) bal += Number(tr.amount) || 0;
+    });
+    return bal;
+  }
+
+  function walletsHTML() {
+    if (!S.wallets.length) return '';
+    var cards = S.wallets.map(function (w) {
+      var bal = walletBalance(w.id);
+      return '<button class="wcard' + (bal < 0 ? ' neg' : '') + '" type="button" data-act="open-wallet" data-id="' + w.id + '">' +
+        '<span class="wc-ic" style="background:' + esc(w.color || '#5E5CE6') + '">' + esc(w.emoji || '💳') + '</span>' +
+        '<span class="wc-t">' + esc(walletName(w)) + '</span>' +
+        '<span class="wc-v">' + money(Math.abs(bal)) + '</span>' +
+      '</button>';
+    }).join('');
+    cards += '<button class="wcard add" type="button" data-act="new-wallet" aria-label="' + esc(t('wallet_new')) + '">+</button>';
+    return '<div class="wcar" id="wcar">' + cards + '</div>';
+  }
+
+  var _walletDraft = null;
+  function openWalletSheet(id) {
+    var existing = id ? walletById(id) : null;
+    _walletDraft = existing
+      ? { id: existing.id, bn: existing.bn || '', en: existing.en || '', emoji: existing.emoji || '💳',
+          color: existing.color || WALLET_COLORS[5], opening: existing.opening || 0, isNew: false }
+      : { id: null, bn: '', en: '', emoji: '💳', color: WALLET_COLORS[0], opening: 0, isNew: true };
+    paintWalletSheet();
+    openSheet('sheetWallet');
+  }
+
+  function paintWalletSheet() {
+    var body = document.getElementById('walletBody');
+    if (!body || !_walletDraft) return;
+    var d = _walletDraft;
+    var title = document.getElementById('sheetWalletTitle');
+    if (title) title.textContent = d.isNew ? t('wallet_new') : t('wallet_edit');
+
+    var h = '';
+    h += '<div class="field"><label>' + esc(t('wallet_name_bn')) + '</label>' +
+      '<input class="input" type="text" id="walBn" value="' + esc(d.bn) + '" maxlength="20" placeholder="বিকাশ" /></div>';
+    h += '<div class="field"><label>' + esc(t('wallet_name_en')) + '</label>' +
+      '<input class="input" type="text" id="walEn" value="' + esc(d.en) + '" maxlength="20" placeholder="bKash" /></div>';
+    h += '<div class="field"><label>' + esc(t('wallet_opening')) + ' (' + esc(S.settings.currency) + ')</label>' +
+      '<input class="input" type="number" inputmode="decimal" id="walOpening" value="' + esc(String(d.opening || 0)) + '" /></div>';
+    h += '<div class="field"><label>' + esc(t('icon')) + '</label><div class="chips" id="walEmoji">';
+    ['💵','📱','📲','🚀','🏦','💳','🪙','👛','🏧','📈'].forEach(function (em) {
+      h += '<button class="chip' + (d.emoji === em ? ' on' : '') + '" type="button" data-act="pick-wallet-emoji" data-v="' + em + '">' + em + '</button>';
+    });
+    h += '</div></div>';
+    h += '<div class="field"><label>' + esc(t('color')) + '</label><div class="chips" id="walColor">';
+    WALLET_COLORS.forEach(function (c) {
+      h += '<button class="chip' + (d.color === c ? ' on' : '') + '" type="button" data-act="pick-wallet-color" data-v="' + c + '" ' +
+        'style="background:' + c + ';width:34px;height:34px;border-radius:12px;padding:0"></button>';
+    });
+    h += '</div></div>';
+    body.innerHTML = h;
+
+    var del = document.getElementById('walletDeleteBtn');
+    if (del) del.hidden = d.isNew || S.wallets.length <= 1;
+  }
+
+  function saveWalletFromSheet() {
+    var d = _walletDraft;
+    if (!d) return;
+    var bn = (document.getElementById('walBn') || {}).value || '';
+    var en = (document.getElementById('walEn') || {}).value || '';
+    var op = parseAmount((document.getElementById('walOpening') || {}).value || '0');
+    bn = String(bn).trim(); en = String(en).trim();
+    if (!bn && !en) { toast(t('wallet_name_bn') + '?', 'warn'); return; }
+    if (!isFinite(op)) op = 0;
+
+    if (d.isNew) {
+      S.wallets.push({ id: uid('w'), bn: bn || en, en: en || bn, emoji: d.emoji, color: d.color, opening: op, custom: true });
+      toast(t('wallet_added'));
+    } else {
+      var w = walletById(d.id);
+      w.bn = bn || w.bn; w.en = en || w.en;
+      w.emoji = d.emoji; w.color = d.color; w.opening = op;
+      toast(t('saved'));
+    }
+    save(true); haptic('success');
+    closeSheet('sheetWallet');
+    renderCurrent(true);
+  }
+
+  function deleteWallet() {
+    var d = _walletDraft;
+    if (!d || d.isNew) return;
+    var used = S.txs.filter(function (x) { return x.walletId === d.id; }).length;
+    var fallback = S.wallets.filter(function (w) { return w.id !== d.id; })[0];
+    if (!fallback) { toast(t('wallet_need_one'), 'warn'); return; }
+    askConfirm({
+      title: t('wallet_delete_q'),
+      body: used ? t('wallet_delete_used', { n: String(num(used)) }) : t('wallet_delete_sub'),
+      okText: t('delete'),
+      onOk: function () {
+        /* never orphan history: move the transactions to another wallet */
+        S.txs.forEach(function (x) { if (x.walletId === d.id) x.walletId = fallback.id; });
+        S.wallets = S.wallets.filter(function (w) { return w.id !== d.id; });
+        save(true);
+        closeSheet('sheetWallet');
+        toast(t('wallet_deleted'));
+        renderCurrent(true);
+      }
+    });
+  }
+
+  /* ---- transfer between wallets ---- */
+  var _transferDraft = null;
+  function openTransferSheet() {
+    if (S.wallets.length < 2) { toast(t('wallet_need_two'), 'warn'); return; }
+    _transferDraft = { from: S.wallets[0].id, to: S.wallets[1].id, amount: '', date: todayIso(), note: '' };
+    paintTransferSheet();
+    openSheet('sheetTransfer');
+  }
+
+  function paintTransferSheet() {
+    var body = document.getElementById('transferBody');
+    var d = _transferDraft;
+    if (!body || !d) return;
+    var h = '';
+    h += '<div class="field"><label>' + esc(t('wallet_from')) + '</label><div class="chips">';
+    S.wallets.forEach(function (w) {
+      h += '<button class="chip' + (d.from === w.id ? ' on' : '') + '" type="button" data-act="tr-from" data-v="' + w.id + '">' +
+        esc(w.emoji + ' ' + walletName(w)) + '</button>';
+    });
+    h += '</div></div>';
+    h += '<div class="field"><label>' + esc(t('wallet_to')) + '</label><div class="chips">';
+    S.wallets.forEach(function (w) {
+      if (d.from === w.id) return;   /* the source is never also the target */
+      h += '<button class="chip' + (d.to === w.id ? ' on' : '') + '" type="button" data-act="tr-to" data-v="' + w.id + '">' +
+        esc(w.emoji + ' ' + walletName(w)) + '</button>';
+    });
+    h += '</div></div>';
+    h += '<div class="field"><label>' + esc(t('amount')) + ' (' + esc(S.settings.currency) + ')</label>' +
+      '<input class="input" type="number" inputmode="decimal" id="trAmount" value="' + esc(d.amount) + '" placeholder="0" /></div>';
+    h += '<div class="field"><label>' + esc(t('date')) + '</label>' +
+      '<input class="input" type="date" id="trDate" value="' + esc(d.date) + '" /></div>';
+    h += '<div class="field"><label>' + esc(t('note')) + '</label>' +
+      '<input class="input" type="text" id="trNote" value="' + esc(d.note) + '" maxlength="60" /></div>';
+    var fb = walletById(d.from), tb = walletById(d.to);
+    h += '<p style="font-size:12px;color:var(--text-3);line-height:1.7">' + esc(t('wallet_tr_hint')) + '</p>';
+    h += '<div class="grid2 mt12"><div class="card mini"><div class="m-lab">' + esc(walletName(fb)) + '</div>' +
+      '<div class="m-val">' + money(walletBalance(fb.id)) + '</div></div>' +
+      '<div class="card mini"><div class="m-lab">' + esc(walletName(tb)) + '</div>' +
+      '<div class="m-val">' + money(walletBalance(tb.id)) + '</div></div></div>';
+    body.innerHTML = h;
+  }
+
+  function doTransfer() {
+    var d = _transferDraft;
+    if (!d) return;
+    var amt = parseAmount(d.amount);
+    if (!isFinite(amt) || amt <= 0) { toast(t('amount') + '?', 'warn'); return; }
+    if (d.from === d.to) { toast(t('wallet_same'), 'warn'); return; }
+    S.transfers.push({
+      id: uid('tr'), fromWallet: d.from, toWallet: d.to,
+      amount: Math.round(amt * 100) / 100, date: d.date || todayIso(),
+      note: d.note || '', createdAt: Date.now()
+    });
+    save(true); haptic('success');
+    closeSheet('sheetTransfer');
+    toast(t('wallet_transferred'));
+    renderCurrent(true);
+  }
+
+  /* ======================================================================
+     3.10c  v4 · RECURRING ENTRIES (রিকারিং এন্ট্রি)
+     ====================================================================== */
+  function freqs() {
+    return [['none', 'rep_none'], ['daily', 'rep_daily'], ['weekly', 'rep_weekly'],
+            ['monthly', 'rep_monthly'], ['yearly', 'rep_yearly']];
+  }
+
+  /** add one period to an ISO date (month/year clamp to the last valid day) */
+  function addPeriod(freq, iso, n) {
+    n = n || 1;
+    var d = dateOf(iso);
+    if (freq === 'daily') d.setDate(d.getDate() + n);
+    else if (freq === 'weekly') d.setDate(d.getDate() + 7 * n);
+    else if (freq === 'monthly') {
+      var day = d.getDate();
+      d.setDate(1);
+      d.setMonth(d.getMonth() + n);
+      var last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      d.setDate(Math.min(day, last));
+    } else if (freq === 'yearly') d.setFullYear(d.getFullYear() + n);
+    else return null;
+    return isoOf(d);
+  }
+
+  /**
+   * Catch-up engine. Runs on every app open: for each active rule it walks
+   * forward from the last materialised date (or the rule's start) creating
+   * every occurrence that is due, including days/months missed while the app
+   * was closed. Capped so a corrupt rule can never freeze the boot.
+   */
+  function applyRecurring() {
+    var today = todayIso();
+    var created = 0;
+    var CAP = 400;
+    (S.recurring || []).forEach(function (r) {
+      if (r.paused || !r.freq || r.freq === 'none') return;
+      var cursor = r.lastRun ? addPeriod(r.freq, r.lastRun, r.interval || 1) : (r.start || today);
+      if (!cursor) return;
+      var guard = 0;
+      while (cursor && cursor <= today && guard < 500) {
+        guard++;
+        if (r.end && cursor > r.end) break;
+        var exists = S.txs.some(function (x) { return x.ruleId === r.id && x.date === cursor; });
+        if (!exists) {
+          var amt = Number(r.amount) || 0;
+          if (amt > 0) {
+            S.txs.push({
+              id: uid('tx'), date: cursor, type: r.type || 'expense',
+              categoryId: r.categoryId || 'other', amount: amt,
+              noteBn: r.title || '', noteEn: '',
+              method: r.walletId || 'cash', walletId: r.walletId || 'cash',
+              recurring: true, ruleId: r.id, createdAt: Date.now()
+            });
+            created++;
+          }
+        }
+        r.lastRun = cursor;
+        cursor = addPeriod(r.freq, cursor, r.interval || 1);
+        if (created >= CAP) break;
+      }
+    });
+    if (created) save(true);
+    return created;
+  }
+
+  function recurLabel(r) {
+    var f = { daily: 'rep_daily', weekly: 'rep_weekly', monthly: 'rep_monthly', yearly: 'rep_yearly' }[r.freq];
+    return f ? t(f) : '';
+  }
+
+  var _recurDraft = null;
+  function openRecurSheet() {
+    _recurDraft = null;
+    paintRecurSheet();
+    openSheet('sheetRecur');
+  }
+
+  function paintRecurSheet() {
+    var body = document.getElementById('recurBody');
+    if (!body) return;
+    var h = '';
+
+    /* --- templates --- */
+    h += '<div class="sec-title" style="margin:2px 2px 9px;">' + esc(t('recur_templates')) + '</div>';
+    h += '<div class="chips" style="margin-bottom:16px;">' + RECUR_TEMPLATES.map(function (tp) {
+      return '<button class="chip" type="button" data-act="recur-template" data-v="' + tp.id + '">' +
+        esc(S.settings.lang === 'en' ? tp.en : tp.bn) + '</button>';
+    }).join('') + '</div>';
+
+    /* --- the inline rule form --- */
+    if (_recurDraft) {
+      var d = _recurDraft;
+      h += '<div class="card" style="padding:14px;border-radius:20px;margin-bottom:16px;">';
+      h += '<div class="seg" id="recurTypeSeg" style="margin-bottom:12px;"><span class="seg-pill"></span>' +
+        '<button type="button" data-recur-type="income"' + (d.type === 'income' ? ' class="on"' : '') + '>' + esc(t('income')) + '</button>' +
+        '<button type="button" data-recur-type="expense"' + (d.type !== 'income' ? ' class="on"' : '') + '>' + esc(t('expense')) + '</button></div>';
+      h += '<div class="field"><label>' + esc(t('title')) + '</label>' +
+        '<input class="input" type="text" id="rcTitle" value="' + esc(d.title) + '" maxlength="40" placeholder="' + esc(t('recur_title_ph')) + '" /></div>';
+      h += '<div class="field"><label>' + esc(t('amount')) + '</label>' +
+        '<input class="input" type="number" inputmode="decimal" id="rcAmount" value="' + esc(d.amount) + '" placeholder="0" /></div>';
+      h += '<div class="field"><label>' + esc(t('recur_every')) + '</label><div class="chips">' +
+        [['daily','rep_daily'],['weekly','rep_weekly'],['monthly','rep_monthly'],['yearly','rep_yearly']].map(function (f) {
+          return '<button class="chip' + (d.freq === f[0] ? ' on' : '') + '" type="button" data-act="recur-freq" data-v="' + f[0] + '">' + esc(t(f[1])) + '</button>';
+        }).join('') + '</div></div>';
+      h += '<div class="field"><label>' + esc(t('start')) + '</label><input class="input" type="date" id="rcStart" value="' + esc(d.start) + '" /></div>';
+      h += '<div class="field"><label>' + esc(t('end')) + ' <span style="color:var(--text-3)">(' + esc(t('optional')) + ')</span></label>' +
+        '<input class="input" type="date" id="rcEnd" value="' + esc(d.end || '') + '" /></div>';
+      h += '<div class="field"><label>' + esc(t('category')) + '</label><div class="chips">' +
+        S.categories.filter(function (c) { return c.kind === d.type || c.kind === 'both'; }).map(function (c) {
+          return '<button class="chip' + (d.categoryId === c.id ? ' on' : '') + '" type="button" data-act="recur-cat" data-v="' + c.id + '">' + esc(c.emoji + ' ' + catName(c)) + '</button>';
+        }).join('') + '</div></div>';
+      h += '<div class="field" style="margin-bottom:0"><label>' + esc(t('wallet')) + '</label><div class="chips">' +
+        S.wallets.map(function (w) {
+          return '<button class="chip' + (d.walletId === w.id ? ' on' : '') + '" type="button" data-act="recur-wallet" data-v="' + w.id + '">' + esc(w.emoji + ' ' + walletName(w)) + '</button>';
+        }).join('') + '</div></div>';
+      h += '<button class="btn btn-primary btn-block" type="button" style="margin-top:14px;" data-act="recur-save">' + esc(t('save')) + '</button>';
+      h += '</div>';
+    }
+
+    /* --- existing rules --- */
+    h += '<div class="sec-title" style="margin:2px 2px 9px;">' + esc(t('recur_rules')) + '</div>';
+    if (!S.recurring.length) {
+      h += '<p style="font-size:12.5px;color:var(--text-3);padding:4px 2px 16px;">' + esc(t('recur_none')) + '</p>';
+    } else {
+      h += '<div class="list" style="padding-bottom:10px;">' + S.recurring.map(function (r) {
+        var cat = catById(r.categoryId);
+        return '<div class="entry-row">' +
+          '<span class="e-badge ' + (r.type === 'income' ? 'got' : 'gave') + '" aria-hidden="true">' + esc(cat.emoji) + '</span>' +
+          '<span class="grow" style="min-width:0">' +
+            '<span class="tx-name">' + esc(r.title || catName(cat)) + '</span>' +
+            '<span class="tx-sub">' + esc(recurLabel(r)) + ' <span class="sep">·</span> ' + esc(shortDate(r.start)) +
+              (r.paused ? ' <span class="badge due">' + esc(t('paused')) + '</span>' : '') + '</span>' +
+          '</span>' +
+          '<span class="tx-amt ' + (r.type === 'income' ? 'in' : 'ex') + '">' + money(r.amount) + '</span>' +
+          '<button class="icon-btn" style="width:34px;height:34px;border-radius:11px" type="button" data-act="recur-toggle" data-id="' + r.id + '" aria-label="' + esc(t(r.paused ? 'resume' : 'pause')) + '">' +
+            esc(r.paused ? '▶' : '⏸') + '</button>' +
+          '<button class="icon-btn" style="width:34px;height:34px;border-radius:11px" type="button" data-act="recur-del" data-id="' + r.id + '" aria-label="' + esc(t('delete')) + '">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:16px;height:16px"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13"/></svg></button>' +
+        '</div>';
+      }).join('') + '</div>';
+    }
+    body.innerHTML = h;
+    var seg = document.getElementById('recurTypeSeg');
+    if (seg && _recurDraft) positionSegPill(seg, _recurDraft.type === 'income' ? 0 : 1);
+  }
+
+  function newRecurDraft(template) {
+    var tp = template || null;
+    _recurDraft = {
+      id: null,
+      title: tp ? (S.settings.lang === 'en' ? tp.en : tp.bn) : '',
+      type: tp ? tp.type : 'expense',
+      amount: tp ? String(tp.amount) : '',
+      freq: 'monthly',
+      start: todayIso(),
+      end: '',
+      categoryId: tp ? tp.cat : 'bills',
+      walletId: S.wallets[0] ? S.wallets[0].id : 'cash'
+    };
+    paintRecurSheet();
+  }
+
+  function saveRecur() {
+    var d = _recurDraft;
+    if (!d) return;
+    d.title = ((document.getElementById('rcTitle') || {}).value || d.title || '').trim();
+    d.amount = ((document.getElementById('rcAmount') || {}).value || d.amount || '');
+    d.start = ((document.getElementById('rcStart') || {}).value || d.start || todayIso());
+    d.end = ((document.getElementById('rcEnd') || {}).value || '');
+    var amt = parseAmount(d.amount);
+    if (!isFinite(amt) || amt <= 0) { toast(t('amount') + '?', 'warn'); return; }
+    if (!d.title) d.title = catName(catById(d.categoryId));
+    S.recurring.push({
+      id: uid('rc'), title: d.title, type: d.type, amount: Math.round(amt * 100) / 100,
+      freq: d.freq, interval: 1, start: d.start, end: d.end || null,
+      categoryId: d.categoryId, walletId: d.walletId, paused: false,
+      lastRun: null, createdAt: Date.now()
+    });
+    save(true);
+    /* materialise anything already due today so the user sees it immediately */
+    var n = applyRecurring();
+    haptic('success');
+    _recurDraft = null;
+    toast(n ? t('recur_added_with', { n: String(num(n)) }) : t('recur_added'));
+    paintRecurSheet();
+    renderCurrent(false);
+  }
+
+  /* ======================================================================
+     3.10d  v4 · VOICE INPUT (ভয়েস ইনপুট)
+     ----------------------------------------------------------------------
+     Pure keyword + number parsing, no libraries. Understands Bangla digits,
+     English digits and Bangla number words (এক শ, পাঁচশ, হাজার, লাখ).
+     ====================================================================== */
+  var BN_WORD_NUM = {
+    'এক': 1, 'দুই': 2, 'তিন': 3, 'চার': 4, 'পাঁচ': 5, 'ছয়': 6, 'সাত': 7, 'আট': 8, 'নয়': 9, 'দশ': 10,
+    'এগারো': 11, 'বারো': 12, 'তেরো': 13, 'চৌদ্দ': 14, 'পনেরো': 15, 'ষোল': 16, 'সতেরো': 17, 'আঠারো': 18, 'উনিশ': 19,
+    'বিশ': 20, 'ত্রিশ': 30, 'চল্লিশ': 40, 'পঞ্চাশ': 50, 'ষাট': 60, 'সত্তর': 70, 'আশি': 80, 'নব্বই': 90,
+    'একশ': 100, 'একশত': 100, 'দুইশ': 200, 'তিনশ': 300, 'চারশ': 400, 'পাঁচশ': 500,
+    'ছয়শ': 600, 'সাতশ': 700, 'আটশ': 800, 'নয়শ': 900,
+    'শ': 100, 'শত': 100, 'হাজার': 1000, 'লাখ': 100000, 'লক্ষ': 100000
+  };
+
+  function bnWordsToAmount(text) {
+    var parts = String(text).split(/[\s,]+/);
+    var total = 0, small = 0, found = false;
+    for (var i = 0; i < parts.length; i++) {
+      var v = BN_WORD_NUM[parts[i]];
+      if (v === undefined) continue;
+      found = true;
+      if (v >= 100) { total += (small || 1) * v; small = 0; }
+      else small += v;
+    }
+    return found ? (total + small) : 0;
+  }
+
+  var VOICE_CATS = [
+    ['grocery',   /বাজার|মুদি|কাঁচা|সবজি|grocery/i],
+    ['transport', /রিকশা|সিএনজি|বাস|উবার|পাঠাও|ট্রেন|যাতায়াত|ভাড়া গাড়ি|fuel|petrol|cng|bus|taxi/i],
+    ['food',      /খাবার|বিরিয়ানি|নাশতা|চা|কফি|রেস্টুরেন্ট|হোটেল|লাঞ্চ|ডিনার|food|biryani|lunch|dinner/i],
+    ['bills',     /বিদ্যুৎ|গ্যাস|পানি|ইন্টারনেট|বিল|bill|electric|gas|water|internet/i],
+    ['salary',    /বেতন|স্যালারি|salary/i],
+    ['business',  /ফ্রিল্যান্স|দোকান|বিক্রি|ব্যবসা|আয়|freelance|sale|business/i],
+    ['health',    /ঔষধ|ডাক্তার|হাসপাতাল|টেস্ট|medicine|doctor|hospital/i],
+    ['education', /বই|কোচিং|টিউশন|স্কুল|কলেজ|ফি|book|tuition|school|fee/i],
+    ['fun',       /সিনেমা|ঘুরতে|বেড়াতে|ঈদ|উপহার|movie|gift|travel/i],
+    ['rent',      /বাসা ভাড়া|বাড়ি ভাড়া|rent/i]
+  ];
+
+  function voiceSupported() {
+    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  }
+
+  /**
+   * Parse a spoken Bangla sentence into a transaction draft.
+   * Examples that work:
+   *   "বাজার ৫০০ টাকা"          → expense 500 grocery
+   *   "বেতন পেলাম ২৫০০০"        → income 25000 salary
+   *   "রিকশা ভাড়া ৮০ টাকা খরচ"  → expense 80 transport
+   *   "রহিমকে ১০০০ টাকা বাকি দিলাম" → ledger 1000 (ই দিলাম)
+   */
+  function parseVoice(raw) {
+    var text = String(raw || '').trim();
+    var ascii = toAsciiDigits(text);
+
+    var out = { type: 'expense', amount: 0, categoryId: null, walletId: (S.wallets[0] || {}).id || 'cash',
+                note: text, person: null, isBaki: false };
+
+    /* --- amount: prefer digits, fall back to Bangla number words --- */
+    var m = ascii.match(/(\d+(?:\.\d+)?)/);
+    var fromDigits = m ? parseFloat(m[1]) : 0;
+    if (!fromDigits || !isFinite(fromDigits)) {
+      var wordAmt = bnWordsToAmount(text);
+      if (wordAmt) fromDigits = wordAmt;
+    }
+    /* "দেড় শ" / "সোয়া হাজার" style halves */
+    if (/দেড়/.test(text) && fromDigits) fromDigits = fromDigits * 1.5;
+    else if (/সোয়া/.test(text) && fromDigits) fromDigits = fromDigits * 1.25;
+    out.amount = Math.round((fromDigits || 0) * 100) / 100;
+
+    /* --- type --- */
+    if (/বাকি|ধার|পাওনা|দেনা|baki|due|owed/i.test(text)) out.isBaki = true;
+    if (/পেলাম|পেয়েছি|আয়|income|পাই|জমা|বেতন|got|received/i.test(text)) out.type = 'income';
+    if (/খরচ|কিনলাম|দিলাম|খেলাম|গেলাম|bought|spent|paid|expense|বিল দিলাম/i.test(text)) out.type = 'expense';
+    /* an explicit baki sentence is a ledger event, not a plain expense */
+    if (out.isBaki && /দিলাম|ধার দিলাম|দিয়েছি/i.test(text)) out.type = 'gave';
+    if (out.isBaki && /নিলাম|ধার নিলাম|পেলাম/i.test(text)) out.type = 'got';
+
+    /* --- category --- */
+    for (var i = 0; i < VOICE_CATS.length; i++) {
+      if (VOICE_CATS[i][1].test(text)) {
+        var cid = VOICE_CATS[i][0];
+        if (cid === 'rent') cid = 'bills';
+        if (S.categories.some(function (c) { return c.id === cid; })) { out.categoryId = cid; break; }
+      }
+    }
+    if (!out.categoryId) out.categoryId = out.type === 'income' ? 'other' : 'other';
+
+    /* --- person, when the sentence names one ("রহিমকে ...") --- */
+    var pm = text.match(/([\u0980-\u09FFA-Za-z\s]{2,20})কে/);
+    if (pm) out.person = pm[1].trim();
+
+    /* --- wallet --- */
+    if (/বিকাশ|bkash/i.test(text)) out.walletId = 'bkash';
+    else if (/নগদ|nagad/i.test(text)) out.walletId = 'nagad';
+    else if (/রকেট|rocket/i.test(text)) out.walletId = 'rocket';
+    else if (/ব্যাংক|bank/i.test(text)) out.walletId = 'bank';
+    else if (/ক্যাশ|cash/i.test(text)) out.walletId = 'cash';
+    if (!S.wallets.some(function (w) { return w.id === out.walletId; })) out.walletId = (S.wallets[0] || {}).id || 'cash';
+
+    /* --- a tidy note: strip the amount and filler words --- */
+    var note = text.replace(/(\d+(?:\.\d+)?)/g, '').replace(/টাকা|taka|tk/gi, '')
+      .replace(/খরচ|পেলাম|দিলাম|কিনলাম|নিলাম|আয়|আমি/g, '').replace(/\s+/g, ' ').trim();
+    out.note = note.slice(0, 60);
+    return out;
+  }
+
+  function toAsciiDigits(s) {
+    return String(s).replace(/[০-৯]/g, function (d) { return String(d.charCodeAt(0) - 0x09E6); });
+  }
+
+  var _voiceDraft = null, _recog = null, _listening = false;
+
+  function openVoiceSheet() {
+    if (!voiceSupported()) { toast(t('voice_unsupported'), 'warn'); return; }
+    _voiceDraft = null;
+    paintVoiceSheet();
+    openSheet('sheetVoice');
+    startVoice();
+  }
+
+  function paintVoiceSheet() {
+    var body = document.getElementById('voiceBody');
+    if (!body) return;
+    var h = '';
+    if (_listening) {
+      h += '<div class="voice-wrap"><div class="voice-ring">🎙️</div>' +
+        '<p style="font-size:13px;color:var(--text-2);text-align:center">' + esc(t('voice_listening')) + '</p>' +
+        '<div class="voice-heard" id="voiceHeard" style="color:var(--text-3)">' + esc(t('voice_hint')) + '</div></div>';
+    } else if (_voiceDraft) {
+      var d = _voiceDraft;
+      var cat = catById(d.categoryId);
+      h += '<div class="card" style="padding:14px;border-radius:20px;margin-bottom:12px;">' +
+        '<div class="row" style="justify-content:space-between;align-items:baseline">' +
+          '<span style="font-size:12px;color:var(--text-3)">' + esc(t('voice_heard')) + '</span></div>' +
+        '<p style="font-size:14px;font-weight:600;margin:6px 0 14px">' + esc(d.raw || '') + '</p>' +
+        '<div class="row" style="justify-content:space-between"><span style="font-size:13px;color:var(--text-3)">' + esc(t('amount')) + '</span>' +
+          '<span style="font-size:20px;font-weight:700">' + money(d.amount) + '</span></div>' +
+        '<div class="row" style="justify-content:space-between;margin-top:8px"><span style="font-size:13px;color:var(--text-3)">' + esc(t('type')) + '</span>' +
+          '<span style="font-size:13px;font-weight:700;color:' + (d.type === 'income' ? 'var(--income)' : (d.type === 'expense' ? 'var(--expense)' : 'var(--accent)')) + '">' +
+          esc(d.type === 'income' ? t('income') : (d.type === 'expense' ? t('expense') : t('baki'))) + '</span></div>' +
+        '<div class="row" style="justify-content:space-between;margin-top:8px"><span style="font-size:13px;color:var(--text-3)">' + esc(t('category')) + '</span>' +
+          '<span style="font-size:13px;font-weight:700">' + esc(cat.emoji + ' ' + catName(cat)) + '</span></div>' +
+        (d.person ? '<div class="row" style="justify-content:space-between;margin-top:8px"><span style="font-size:13px;color:var(--text-3)">' + esc(t('person')) + '</span>' +
+          '<span style="font-size:13px;font-weight:700">' + esc(d.person) + '</span></div>' : '') +
+      '</div>';
+      h += '<p style="font-size:12px;color:var(--text-3);text-align:center;line-height:1.7">' + esc(t('voice_edit_hint')) + '</p>';
+    } else {
+      h += '<div class="voice-wrap"><div class="voice-ring">🎙️</div>' +
+        '<p style="font-size:13px;color:var(--text-2);text-align:center">' + esc(t('voice_error')) + '</p></div>';
+    }
+    body.innerHTML = h;
+    var sv = document.getElementById('voiceSave');
+    if (sv) sv.style.display = _listening ? 'none' : '';
+  }
+
+  function startVoice() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { toast(t('voice_unsupported'), 'warn'); return; }
+    try {
+      if (_recog) { try { _recog.abort(); } catch (e) {} }
+      _recog = new SR();
+      _recog.lang = 'bn-BD';
+      _recog.interimResults = true;
+      _recog.continuous = false;
+      _recog.maxAlternatives = 1;
+      _listening = true;
+      paintVoiceSheet();
+      haptic('light');
+
+      _recog.onresult = function (ev) {
+        var txt = '';
+        for (var i = 0; i < ev.results.length; i++) txt += ev.results[i][0].transcript;
+        var heard = document.getElementById('voiceHeard');
+        if (heard) { heard.textContent = txt; heard.style.color = ''; }
+        if (ev.results[ev.results.length - 1].isFinal) {
+          finishVoice(txt);
+        }
+      };
+      _recog.onerror = function (ev) {
+        _listening = false;
+        var code = ev && ev.error;
+        if (code === 'not-allowed' || code === 'service-not-allowed') {
+          toast(t('voice_denied'), 'warn');
+          _voiceDraft = null;
+        } else if (code === 'no-speech') {
+          toast(t('voice_nospeech'), 'warn');
+        } else {
+          /* bn-BD is not available everywhere — retry once in en-US */
+          if (_recog && _recog.lang !== 'en-US') {
+            _recog.lang = 'en-US';
+            try { _recog.start(); _listening = true; } catch (e) { _listening = false; }
+            paintVoiceSheet();
+            return;
+          }
+          toast(t('voice_error'), 'warn');
+        }
+        paintVoiceSheet();
+      };
+      _recog.onend = function () {
+        if (_listening && !_voiceDraft) { _listening = false; paintVoiceSheet(); }
+      };
+      _recog.start();
+    } catch (err) {
+      _listening = false;
+      toast(t('voice_error'), 'warn');
+      paintVoiceSheet();
+    }
+  }
+
+  function finishVoice(txt) {
+    _listening = false;
+    if (_recog) { try { _recog.stop(); } catch (e) {} }
+    var parsed = parseVoice(txt);
+    if (!parsed.amount) {
+      _voiceDraft = null;
+      toast(t('voice_noamount'), 'warn');
+      paintVoiceSheet();
+      return;
+    }
+    parsed.raw = txt;
+    _voiceDraft = parsed;
+    haptic('success');
+    paintVoiceSheet();
+  }
+
+  /** hand the parsed draft to the normal transaction sheet, pre-filled */
+  function voiceToTxSheet() {
+    var d = _voiceDraft;
+    if (!d) return;
+    closeSheet('sheetVoice');
+    if (d.isBaki) {
+      /* a baki sentence belongs in the ledger — find or create the person */
+      var name = d.person || t('unnamed');
+      var p = S.people.filter(function (x) { return (x.nameBn || '') === name; })[0];
+      if (!p) {
+        p = { id: uid('p'), nameBn: name, nameEn: '', phone: '', createdAt: Date.now() };
+        S.people.push(p);
+      }
+      S.entries.push({
+        id: uid('e'), personId: p.id, dir: d.type === 'got' ? 'got' : 'gave',
+        amount: d.amount, date: todayIso(), noteBn: d.note || '', noteEn: '', createdAt: Date.now()
+      });
+      save(true); haptic('success');
+      toast(t('voice_saved_baki', { name: name }));
+      renderCurrent(true);
+      return;
+    }
+    openTxSheet(null, d.type === 'income' ? 'income' : 'expense');
+    UI.txDraft.amountStr = String(d.amount);
+    UI.txDraft.categoryId = d.categoryId;
+    UI.txDraft.note = d.note || '';
+    UI.txDraft.walletId = d.walletId;
+    paintTxSheet();
+  }
+
+  /* helper: a settings-style switch row (kept next to its users) */
+  function choiceRow(act, icon, label, sub, value) {
+    return '<button class="set-item" type="button" data-act="' + act + '" style="width:100%;text-align:left">' +
+      '<span class="si-ic">' + icon + '</span>' +
+      '<span class="si-t"><span class="si-l">' + esc(label) + '</span>' +
+      '<span class="si-s">' + esc(sub) + '</span></span>' +
+      '<span class="set-val">' + esc(value) + ' ›</span></button>';
+  }
+
+  /* ======================================================================
+     3.10e  v4 · BACKUP + RESTORE
+     ====================================================================== */
+  function backupFileName() {
+    return 'hisab-backup-' + APP_VERSION + '-' + todayIso() + '.json';
+  }
+
+  function exportBackup() {
+    try {
+      var payload = JSON.stringify(S);
+      download(backupFileName(), payload, 'application/json');
+      S.settings.lastBackupDate = todayIso();
+      save(true);
+      haptic('success');
+      toast(t('backup_done'));
+      renderCurrent(false);
+    } catch (err) {
+      toast(t('store_failed'), 'warn');
+    }
+  }
+
+  function daysSinceBackup() {
+    var d = S.settings.lastBackupDate;
+    if (!d) return null;
+    return Math.abs(dayDiff(todayIso(), d));
+  }
+
+  function backupBannerHTML() {
+    var days = S.settings.backupRemindDays;
+    if (!days) return '';                       /* reminder switched off */
+    var since = daysSinceBackup();
+    if (since !== null && since < days) return '';
+    var label = since === null ? t('backup_never') : t('backup_ago', { n: String(num(since)) });
+    return '<div class="bk-banner">' +
+      '<span class="bk-ic">💾</span>' +
+      '<span class="bk-t"><span class="bk-l">' + esc(t('backup_remind')) + '</span>' +
+        '<span class="bk-s">' + esc(label) + '</span></span>' +
+      '<button class="btn btn-primary btn-sm" type="button" data-act="backup-now">' + esc(t('backup_now')) + '</button>' +
+    '</div>';
+  }
+
+  /** validate an imported backup file; returns the normalised state or null */
+  function validateBackup(parsed) {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    var st = normalizeState(parsed);
+    if (!st) return null;
+    /* a file with none of the known collections is not a Hisab backup */
+    var known = ['txs', 'people', 'entries', 'categories', 'budgets', 'settings', 'wallets', 'recurring', 'products', 'sales'];
+    var hits = 0;
+    known.forEach(function (k) { if (parsed[k] !== undefined) hits++; });
+    if (hits === 0) return null;
+    return st;
+  }
+
+  function askImportChoice(imported) {
+    askConfirm({
+      title: t('import_q'),
+      body: t('import_body', { n: String(num(imported.txs.length)), p: String(num(imported.people.length)) }),
+      okText: t('import_replace'),
+      cancelText: t('import_merge'),
+      onOk: function () { commitImport(imported, false); }
+    });
+    /* the "cancel" slot is reused as the MERGE choice, so wire it once */
+    var noBtn = document.getElementById('confirmNo');
+    if (noBtn) {
+      var handler = function () {
+        noBtn.removeEventListener('click', handler);
+        closeAllSheets();
+        commitImport(imported, true);
+      };
+      noBtn.addEventListener('click', handler);
+    }
+  }
+
+  function commitImport(imported, merge) {
+    if (merge) {
+      /* keep existing rows, add only what is genuinely new (id-based) */
+      var seenTx = {};
+      S.txs.forEach(function (x) { seenTx[x.id] = 1; });
+      imported.txs.forEach(function (x) { if (!seenTx[x.id]) S.txs.push(x); });
+      var seenP = {};
+      S.people.forEach(function (x) { seenP[x.id] = 1; });
+      imported.people.forEach(function (x) { if (!seenP[x.id]) S.people.push(x); });
+      var seenE = {};
+      S.entries.forEach(function (x) { seenE[x.id] = 1; });
+      imported.entries.forEach(function (x) { if (!seenE[x.id]) S.entries.push(x); });
+      var seenW = {};
+      S.wallets.forEach(function (x) { seenW[x.id] = 1; });
+      imported.wallets.forEach(function (x) { if (!seenW[x.id]) S.wallets.push(x); });
+    } else {
+      /* replace everything except our own UI preferences (lang/theme/pin) */
+      var keep = {
+        lang: S.settings.lang, theme: S.settings.theme, banglaDigits: S.settings.banglaDigits,
+        pinOn: S.settings.pinOn, pin: S.settings.pin, onboarded: true, celebrate: S.settings.celebrate
+      };
+      S = imported;
+      S.settings = Object.assign(S.settings, keep);
+      S.settings.seeded = true;
+    }
+    S.settings.lastBackupDate = S.settings.lastBackupDate || todayIso();
+    save(true);
+    applySettings(true);
+    haptic('success');
+    toast(t('import_done'));
+    go('home');
+  }
+
+  /* file picker handler, wired in the actions section */
+  function handleImportFile(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var parsed = null;
+      try { parsed = JSON.parse(String(reader.result)); } catch (e) { parsed = null; }
+      var good = parsed ? validateBackup(parsed) : null;
+      if (!good) { toast(t('import_bad'), 'warn'); return; }
+      askImportChoice(good);
+    };
+    reader.onerror = function () { toast(t('import_bad'), 'warn'); };
+    reader.readAsText(file);
+  }
+
+  /* ======================================================================
+     3.10f  v4 · SHOP MODE (দোকান মোড) — stock, sales, invoices
+     ====================================================================== */
+  function shopOn() { return !!S.settings.shopMode; }
+
+  function productById(id) {
+    for (var i = 0; i < S.products.length; i++) if (S.products[i].id === id) return S.products[i];
+    return null;
+  }
+  function lowStock(p) { return Number(p.qty) <= Number(p.low || 0); }
+
+  var _prodDraft = null;
+  function openProductSheet(id) {
+    var ex = id ? productById(id) : null;
+    _prodDraft = ex
+      ? { id: ex.id, name: ex.name, buy: ex.buy, sell: ex.sell, qty: ex.qty, unit: ex.unit || '', low: ex.low || 0, isNew: false }
+      : { id: null, name: '', buy: '', sell: '', qty: '', unit: 'পিস', low: 3, isNew: true };
+    paintProductSheet();
+    openSheet('sheetProduct');
+  }
+
+  function paintProductSheet() {
+    var body = document.getElementById('prodBody');
+    if (!body || !_prodDraft) return;
+    var d = _prodDraft;
+    var title = document.getElementById('sheetProductTitle');
+    if (title) title.textContent = d.isNew ? t('prod_new') : t('prod_edit');
+    var h = '';
+    h += '<div class="field"><label>' + esc(t('prod_name')) + '</label>' +
+      '<input class="input" type="text" id="pdName" value="' + esc(d.name) + '" maxlength="40" /></div>';
+    h += '<div class="grid2">';
+    h += '<div class="field"><label>' + esc(t('prod_buy')) + '</label>' +
+      '<input class="input" type="number" inputmode="decimal" id="pdBuy" value="' + esc(String(d.buy)) + '" /></div>';
+    h += '<div class="field"><label>' + esc(t('prod_sell')) + '</label>' +
+      '<input class="input" type="number" inputmode="decimal" id="pdSell" value="' + esc(String(d.sell)) + '" /></div>';
+    h += '</div>';
+    h += '<div class="grid2">';
+    h += '<div class="field"><label>' + esc(t('prod_qty')) + '</label>' +
+      '<input class="input" type="number" inputmode="decimal" id="pdQty" value="' + esc(String(d.qty)) + '" /></div>';
+    h += '<div class="field"><label>' + esc(t('prod_unit')) + '</label>' +
+      '<input class="input" type="text" id="pdUnit" value="' + esc(d.unit) + '" maxlength="12" /></div>';
+    h += '</div>';
+    h += '<div class="field"><label>' + esc(t('prod_low')) + '</label>' +
+      '<input class="input" type="number" inputmode="numeric" id="pdLow" value="' + esc(String(d.low)) + '" /></div>';
+    body.innerHTML = h;
+    var del = document.getElementById('prodDeleteBtn');
+    if (del) del.hidden = d.isNew;
+  }
+
+  function saveProduct() {
+    var d = _prodDraft;
+    if (!d) return;
+    var name = ((document.getElementById('pdName') || {}).value || '').trim();
+    var buy = parseAmount((document.getElementById('pdBuy') || {}).value || '0');
+    var sell = parseAmount((document.getElementById('pdSell') || {}).value || '0');
+    var qty = parseAmount((document.getElementById('pdQty') || {}).value || '0');
+    var unit = ((document.getElementById('pdUnit') || {}).value || '').trim();
+    var low = parseAmount((document.getElementById('pdLow') || {}).value || '0');
+    if (!name) { toast(t('prod_name') + '?', 'warn'); return; }
+    if (!isFinite(buy)) buy = 0;
+    if (!isFinite(sell)) sell = 0;
+    if (!isFinite(qty)) qty = 0;
+    if (!isFinite(low)) low = 0;
+    if (d.isNew) {
+      S.products.push({ id: uid('pr'), name: name, buy: buy, sell: sell, qty: qty, unit: unit, low: low, createdAt: Date.now() });
+      toast(t('prod_added'));
+    } else {
+      var p = productById(d.id);
+      if (p) { p.name = name; p.buy = buy; p.sell = sell; p.qty = qty; p.unit = unit; p.low = low; }
+      toast(t('saved'));
+    }
+    save(true); haptic('success');
+    closeSheet('sheetProduct');
+    renderCurrent(true);
+  }
+
+  function deleteProduct() {
+    var d = _prodDraft;
+    if (!d || d.isNew) return;
+    askConfirm({
+      title: t('prod_delete_q'), body: t('prod_delete_sub'), okText: t('delete'),
+      onOk: function () {
+        S.products = S.products.filter(function (p) { return p.id !== d.id; });
+        save(true); closeSheet('sheetProduct'); toast(t('prod_deleted')); renderCurrent(true);
+      }
+    });
+  }
+
+  /* ---- sale draft ---- */
+  var _saleDraft = null;
+  function openSaleSheet(saleId) {
+    if (!S.products.length) { toast(t('sale_need_products'), 'warn'); return; }
+    if (saleId) {
+      var ex = S.sales.filter(function (s) { return s.id === saleId; })[0];
+      if (!ex) return;
+      _saleDraft = JSON.parse(JSON.stringify(ex));
+    } else {
+      _saleDraft = {
+        id: null, date: todayIso(), items: [], discount: 0, paid: '',
+        customerId: null, no: nextInvoiceNo()
+      };
+    }
+    paintSaleSheet();
+    openSheet('sheetSale');
+  }
+
+  function nextInvoiceNo() {
+    var n = (S.sales || []).length + 1;
+    return 'INV-' + todayIso().replace(/-/g, '') + '-' + String(n).padStart(3, '0');
+  }
+
+  function saleTotals(d) {
+    var sub = 0, cost = 0;
+    d.items.forEach(function (it) {
+      sub += (Number(it.price) || 0) * (Number(it.qty) || 0);
+      cost += (Number(it.buy) || 0) * (Number(it.qty) || 0);
+    });
+    var disc = Number(d.discount) || 0;
+    var total = Math.max(0, sub - disc);
+    var paid = d.paid === '' ? total : (Number(d.paid) || 0);
+    if (paid > total) paid = total;
+    var due = Math.max(0, Math.round((total - paid) * 100) / 100);
+    return { sub: sub, disc: disc, total: total, paid: paid, due: due, profit: total - cost };
+  }
+
+  function paintSaleSheet() {
+    var body = document.getElementById('saleBody');
+    var d = _saleDraft;
+    if (!body || !d) return;
+    var tt = saleTotals(d);
+    var h = '';
+
+    /* picker */
+    h += '<div class="field"><label>' + esc(t('sale_pick')) + '</label>' +
+      '<input class="input" type="search" id="saleSearch" placeholder="' + esc(t('search')) + '" /></div>';
+    h += '<div class="chips" style="margin-bottom:14px;">' + S.products.slice(0, 24).map(function (p) {
+      var out = lowStock(p) && Number(p.qty) <= 0;
+      return '<button class="chip" type="button" data-act="sale-add" data-id="' + p.id + '"' + (out ? ' style="opacity:.5"' : '') + '>' +
+        esc(p.name) + ' · ' + money(p.sell) + '</button>';
+    }).join('') + '</div>';
+
+    /* cart */
+    if (!d.items.length) {
+      h += '<p style="font-size:12.5px;color:var(--text-3);padding:6px 2px 12px;">' + esc(t('sale_empty')) + '</p>';
+    } else {
+      h += '<div class="card" style="padding:6px 14px;border-radius:20px;margin-bottom:12px;">';
+      h += d.items.map(function (it, idx) {
+        return '<div class="cart-row">' +
+          '<span class="grow" style="min-width:0"><span class="tx-name">' + esc(it.name) + '</span>' +
+          '<span class="tx-sub">' + money(it.price) + ' × ' + num(String(it.qty)) + '</span></span>' +
+          '<span class="qty">' +
+            '<button type="button" data-act="sale-dec" data-i="' + idx + '">−</button>' +
+            '<span>' + num(String(it.qty)) + '</span>' +
+            '<button type="button" data-act="sale-inc" data-i="' + idx + '">+</button>' +
+          '</span>' +
+          '<span class="tx-amt">' + money(it.price * it.qty) + '</span>' +
+        '</div>';
+      }).join('');
+      h += '</div>';
+    }
+
+    /* customer + money */
+    h += '<div class="field"><label>' + esc(t('sale_customer')) + '</label><div class="chips">' +
+      '<button class="chip' + (!d.customerId ? ' on' : '') + '" type="button" data-act="sale-cust" data-v="">' + esc(t('none')) + '</button>' +
+      S.people.map(function (p) {
+        return '<button class="chip' + (d.customerId === p.id ? ' on' : '') + '" type="button" data-act="sale-cust" data-v="' + p.id + '">' + esc(personName(p)) + '</button>';
+      }).join('') + '</div></div>';
+    h += '<div class="grid2">';
+    h += '<div class="field"><label>' + esc(t('sale_discount')) + '</label>' +
+      '<input class="input" type="number" inputmode="decimal" id="saleDisc" value="' + esc(String(d.discount || '')) + '" placeholder="0" /></div>';
+    h += '<div class="field"><label>' + esc(t('sale_paid')) + '</label>' +
+      '<input class="input" type="number" inputmode="decimal" id="salePaid" value="' + esc(String(d.paid)) + '" placeholder="' + esc(String(tt.total)) + '" /></div>';
+    h += '</div>';
+    h += '<div class="field"><label>' + esc(t('date')) + '</label>' +
+      '<input class="input" type="date" id="saleDate" value="' + esc(d.date) + '" /></div>';
+
+    /* totals */
+    h += '<div class="card" style="padding:14px;border-radius:20px;">' +
+      '<div class="row" style="justify-content:space-between"><span style="font-size:13px;color:var(--text-3)">' + esc(t('subtotal')) + '</span><span style="font-weight:600">' + money(tt.sub) + '</span></div>' +
+      '<div class="row" style="justify-content:space-between;margin-top:6px"><span style="font-size:13px;color:var(--text-3)">' + esc(t('sale_discount')) + '</span><span style="font-weight:600">−' + money(tt.disc) + '</span></div>' +
+      '<div class="row" style="justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)"><span style="font-size:14px;font-weight:700">' + esc(t('total')) + '</span><span style="font-size:18px;font-weight:700">' + money(tt.total) + '</span></div>' +
+      '<div class="row" style="justify-content:space-between;margin-top:6px"><span style="font-size:13px;color:var(--text-3)">' + esc(t('sale_paid')) + '</span><span style="font-weight:600;color:var(--income)">' + money(tt.paid) + '</span></div>' +
+      (tt.due > 0 ? '<div class="row" style="justify-content:space-between;margin-top:6px"><span style="font-size:13px;color:var(--text-3)">' + esc(t('sale_due')) + '</span><span style="font-weight:700;color:var(--expense)">' + money(tt.due) + '</span></div>' : '') +
+      '<div class="row" style="justify-content:space-between;margin-top:6px"><span style="font-size:13px;color:var(--text-3)">' + esc(t('profit')) + '</span><span style="font-weight:700;color:' + (tt.profit >= 0 ? 'var(--income)' : 'var(--expense)') + '">' + money(tt.profit) + '</span></div>' +
+    '</div>';
+    body.innerHTML = h;
+  }
+
+  function saleAdd(productId) {
+    var d = _saleDraft;
+    var p = productById(productId);
+    if (!d || !p) return;
+    var line = d.items.filter(function (x) { return x.productId === p.id; })[0];
+    if (line) line.qty += 1;
+    else d.items.push({ productId: p.id, name: p.name, price: Number(p.sell) || 0, buy: Number(p.buy) || 0, qty: 1, unit: p.unit || '' });
+    haptic('light');
+    paintSaleSheet();
+  }
+
+  function saveSale() {
+    var d = _saleDraft;
+    if (!d) return;
+    if (!d.items.length) { toast(t('sale_empty'), 'warn'); return; }
+    d.discount = parseAmount((document.getElementById('saleDisc') || {}).value || '0') || 0;
+    d.paid = ((document.getElementById('salePaid') || {}).value || '');
+    d.date = ((document.getElementById('saleDate') || {}).value || todayIso());
+    var tt = saleTotals(d);
+
+    /* stock: refuse to sell more than is on hand */
+    for (var i = 0; i < d.items.length; i++) {
+      var p = productById(d.items[i].productId);
+      if (p && Number(p.qty) < Number(d.items[i].qty)) {
+        toast(t('sale_low_stock', { name: p.name }), 'warn');
+        return;
+      }
+    }
+    /* decrement stock */
+    d.items.forEach(function (it) {
+      var p = productById(it.productId);
+      if (p) p.qty = round2(Number(p.qty) - Number(it.qty));
+    });
+
+    var sale = {
+      id: uid('sl'), no: d.no || nextInvoiceNo(), date: d.date,
+      items: d.items.map(function (x) { return Object.assign({}, x); }),
+      subtotal: tt.sub, discount: tt.disc, total: tt.total, paid: tt.paid, due: tt.due,
+      profit: tt.profit, customerId: d.customerId || null, createdAt: Date.now()
+    };
+    S.sales.push(sale);
+
+    /* the unpaid part becomes the customer's baki, automatically */
+    if (sale.due > 0 && sale.customerId) {
+      S.entries.push({
+        id: uid('e'), personId: sale.customerId, dir: 'gave', amount: sale.due,
+        date: sale.date, noteBn: t('sale_due_note') + ' ' + sale.no, noteEn: '',
+        saleId: sale.id, createdAt: Date.now()
+      });
+    }
+
+    save(true); haptic('success');
+    burstConfetti($('#saleSaveBtn'), 'income');
+    closeSheet('sheetSale');
+    toast(t('sale_saved', { no: sale.no }));
+    _saleDraft = null;
+    renderCurrent(true);
+    openReceipt(sale.id);
+  }
+
+  function round2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+
+  function openReceipt(saleId) {
+    var sale = S.sales.filter(function (s) { return s.id === saleId; })[0];
+    if (!sale) return;
+    var body = document.getElementById('receiptBody');
+    if (!body) return;
+    UI.receiptSale = saleId;
+    var cust = sale.customerId ? personById(sale.customerId) : null;
+    var h = '<div class="receipt" id="receiptPaper">';
+    h += '<h3>' + esc(S.settings.shopName || t('my_shop')) + '</h3>';
+    h += '<div class="rc-meta">' + (S.settings.shopPhone ? esc(S.settings.shopPhone) + '<br>' : '') +
+      esc(t('invoice')) + ': ' + esc(sale.no) + '<br>' + esc(shortDate(sale.date)) +
+      (cust ? '<br>' + esc(t('customer')) + ': ' + esc(personName(cust)) : '') + '</div>';
+    h += '<table><thead><tr><th>' + esc(t('item')) + '</th><th class="r">' + esc(t('qty')) + '</th><th class="r">' + esc(t('price')) + '</th></tr></thead><tbody>';
+    sale.items.forEach(function (it) {
+      h += '<tr><td>' + esc(it.name) + '</td><td class="r">' + num(String(it.qty)) + '</td><td class="r">' + money(it.price * it.qty) + '</td></tr>';
+    });
+    h += '</tbody></table>';
+    if (sale.discount) h += '<div class="rc-sub"><span>' + esc(t('sale_discount')) + '</span><span>−' + money(sale.discount) + '</span></div>';
+    h += '<div class="rc-tot"><span>' + esc(t('total')) + '</span><span>' + money(sale.total) + '</span></div>';
+    h += '<div class="rc-sub"><span>' + esc(t('sale_paid')) + '</span><span>' + money(sale.paid) + '</span></div>';
+    if (sale.due > 0) h += '<div class="rc-sub"><span>' + esc(t('sale_due')) + '</span><span>' + money(sale.due) + '</span></div>';
+    h += '<div class="rc-foot">' + esc(t('receipt_thanks')) + '<br>' + esc(APP_NAME) + ' · v' + esc(APP_VERSION) + '</div>';
+    h += '</div>';
+    body.innerHTML = h;
+    openSheet('sheetReceipt');
+  }
+
+  function receiptText(sale) {
+    var lines = [];
+    lines.push((S.settings.shopName || t('my_shop')));
+    lines.push(t('invoice') + ': ' + sale.no);
+    lines.push(shortDate(sale.date));
+    lines.push('');
+    sale.items.forEach(function (it) {
+      lines.push(it.name + ' × ' + it.qty + ' = ' + money(it.price * it.qty));
+    });
+    lines.push('');
+    if (sale.discount) lines.push(t('sale_discount') + ': ' + money(sale.discount));
+    lines.push(t('total') + ': ' + money(sale.total));
+    lines.push(t('sale_paid') + ': ' + money(sale.paid));
+    if (sale.due > 0) lines.push(t('sale_due') + ': ' + money(sale.due));
+    lines.push('');
+    lines.push(t('receipt_thanks'));
+    return lines.join('\n');
+  }
+
+  function shareReceipt() {
+    var sale = S.sales.filter(function (s) { return s.id === UI.receiptSale; })[0];
+    if (!sale) return;
+    var txt = receiptText(sale);
+    var cust = sale.customerId ? personById(sale.customerId) : null;
+    /* straight to WhatsApp when the customer has a number, else generic share */
+    if (cust && cust.phone) {
+      var url = 'https://wa.me/' + waNumber(cust.phone) + '?text=' + encodeURIComponent(txt);
+      try { window.open(url, '_blank', 'noopener'); haptic('light'); return; } catch (e) {}
+    }
+    if (navigator.share) {
+      navigator.share({ title: t('invoice'), text: txt }).catch(function () {});
+    } else {
+      copyText(txt, 'copied');
+    }
+  }
+
+  /** print just the receipt paper (clean CSS lives in the @media print block) */
+  function printReceipt() {
+    printSection('#receiptPaper');
+  }
+
+  /**
+   * Print a specific element. Everything else is hidden by the print
+   * stylesheet, so window.print() produces a clean PDF — no separate
+   * window, no popup blocker problems on mobile.
+   */
+  function printSection(selector) {
+    var node = document.querySelector(selector);
+    if (!node) { window.print(); return; }
+    var host = document.createElement('div');
+    host.className = 'print-only';
+    host.id = 'printHost';
+    document.body.appendChild(host);
+    var clone = node.cloneNode(true);
+    host.appendChild(clone);
+    haptic('light');
+    setTimeout(function () {
+      try { window.print(); } catch (e) {}
+      setTimeout(function () { if (host.parentNode) host.parentNode.removeChild(host); }, 800);
+    }, 60);
+  }
+
+  /* build the printable monthly report (Part 5) */
+  function buildReportPaper(period) {
+    var list = (period === 'yearly') ? S.txs.filter(function (x) { return x.date.slice(0, 4) === todayIso().slice(0, 4); })
+                                      : monthTxs();
+    var s = sumOf(list);
+    var byCat = categoryTotals('expense', list);
+    var h = '<div class="receipt" id="reportPaper" style="max-width:none">';
+    h += '<h3>' + esc(APP_NAME) + '</h3>';
+    h += '<div class="rc-meta">' + esc(period === 'yearly' ? t('rep_year') : monthFullLabel(todayIso().slice(0, 7))) + '<br>' +
+      esc(t('generated')) + ': ' + esc(shortDate(todayIso())) + '</div>';
+    h += '<div class="rc-tot"><span>' + esc(t('income')) + '</span><span>' + money(s.income) + '</span></div>';
+    h += '<div class="rc-sub"><span>' + esc(t('expense')) + '</span><span>' + money(s.expense) + '</span></div>';
+    h += '<div class="rc-sub"><span>' + esc(t('net_saving')) + '</span><span>' + money(s.net) + '</span></div>';
+    h += '<div style="height:12px"></div>';
+    if (byCat.length) {
+      h += '<table><thead><tr><th>' + esc(t('category')) + '</th><th class="r">' + esc(t('amount')) + '</th></tr></thead><tbody>';
+      byCat.forEach(function (c) { h += '<tr><td>' + esc(c.name) + '</td><td class="r">' + money(c.value) + '</td></tr>'; });
+      h += '</tbody></table>';
+    }
+    h += '<div style="height:12px"></div>';
+    h += '<table><thead><tr><th>' + esc(t('date')) + '</th><th>' + esc(t('notes')) + '</th><th class="r">' + esc(t('amount')) + '</th></tr></thead><tbody>';
+    list.slice(0, 120).forEach(function (tx) {
+      h += '<tr><td>' + esc(shortDate(tx.date)) + '</td><td>' + esc(txNote(tx) || catName(catById(tx.categoryId))) + '</td><td class="r">' +
+        (tx.type === 'income' ? '+' : '−') + money(tx.amount) + '</td></tr>';
+    });
+    h += '</tbody></table>';
+    h += '<div class="rc-foot">' + esc(APP_NAME) + ' · v' + esc(APP_VERSION) + '</div>';
+    h += '</div>';
+    return h;
+  }
+
+  function shareReport(period) {
+    period = period || 'monthly';
+    var list = period === 'yearly' ? S.txs.filter(function (x) { return x.date.slice(0, 4) === todayIso().slice(0, 4); }) : monthTxs();
+    var s = sumOf(list);
+    var label = period === 'yearly' ? t('rep_year') : monthFullLabel(todayIso().slice(0, 7));
+    var txt = label + '\n' + t('income') + ': ' + money(s.income) + '\n' + t('expense') + ': ' + money(s.expense) + '\n' + t('net_saving') + ': ' + money(s.net);
+    haptic('light');
+    if (navigator.share) {
+      navigator.share({ title: APP_NAME, text: txt, url: location.origin + location.pathname }).catch(function () {});
+    } else {
+      copyText(txt, 'copied');
+    }
+  }
+
+  function printReportPaper() {
+    var host = document.createElement('div');
+    host.className = 'print-only';
+    host.id = 'printHost';
+    host.innerHTML = buildReportPaper(UI.repPeriod);
+    document.body.appendChild(host);
+    haptic('light');
+    setTimeout(function () {
+      try { window.print(); } catch (e) {}
+      setTimeout(function () { if (host.parentNode) host.parentNode.removeChild(host); }, 800);
+    }, 60);
+  }
+
+  /* ---- shop report ---- */
+  function shopStats() {
+    var today = todayIso();
+    var mk = today.slice(0, 7);
+    var todaySales = 0, monthSales = 0, monthProfit = 0, todayProfit = 0;
+    var counts = {};
+    S.sales.forEach(function (s) {
+      if (s.date === today) { todaySales += Number(s.total) || 0; todayProfit += Number(s.profit) || 0; }
+      if (s.date.slice(0, 7) === mk) { monthSales += Number(s.total) || 0; monthProfit += Number(s.profit) || 0; }
+      (s.items || []).forEach(function (it) {
+        counts[it.name] = (counts[it.name] || 0) + (Number(it.qty) || 0);
+      });
+    });
+    var top = Object.keys(counts).map(function (k) { return { name: k, qty: counts[k] }; })
+      .sort(function (a, b) { return b.qty - a.qty; }).slice(0, 5);
+    var low = S.products.filter(lowStock);
+    var stockValue = 0;
+    S.products.forEach(function (p) { stockValue += (Number(p.buy) || 0) * (Number(p.qty) || 0); });
+    return { todaySales: todaySales, todayProfit: todayProfit, monthSales: monthSales,
+             monthProfit: monthProfit, top: top, low: low, stockValue: stockValue };
+  }
+
+  function openAbout() {
+    UI.eggTaps = 0;
+    paintAbout();
+    openSheet('sheetAbout');
+  }
+
+  function paintAbout() {
+    var body = document.getElementById('aboutBody');
+    if (!body) return;
+    var h = '';
+    h += '<div class="about-hero">';
+    h += '<img class="about-ic" id="aboutIcon" src="icon-192.png" alt="' + esc(APP_NAME) + '" width="88" height="88" />';
+    h += '<div class="about-n">' + esc(APP_NAME) + '</div>';
+    h += '<span class="vbadge">v' + esc(APP_VERSION) + '</span>';
+    h += '</div>';
+
+    /* developer card */
+    h += '<div class="dev-card">';
+    h += '<span class="dev-av">R4</span>';
+    h += '<span class="grow" style="min-width:0"><span class="tx-name">' + esc(DEV_NAME) + '</span>' +
+      '<span class="tx-sub">' + esc(t('dev_intro')) + '</span></span>';
+    h += '</div>';
+
+    /* contact pills */
+    h += '<div class="pill-row">';
+    h += '<a class="pill accent" href="' + DEV_TG_URL + '" target="_blank" rel="noopener noreferrer">' +
+      '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 3.3 2.6 10.6c-.9.4-.9 1.6 0 1.9l4.5 1.5 1.7 5.2c.2.8 1.2 1 1.7.3l2.3-2.8 4.4 3.3c.6.5 1.5.1 1.7-.7l3-13.3c.2-.9-.7-1.6-1.4-1.3ZM9.6 14.4l8-6.2-6.7 7.5-.3 3-1-4.3Z"/></svg>' +
+      '@' + esc(DEV_TG) + '</a>';
+    h += '</div>';
+
+    /* action pills */
+    h += '<div class="pill-row">';
+    h += '<button class="pill" type="button" data-act="feedback">🐞 ' + esc(t('feedback')) + '</button>';
+    h += '<button class="pill" type="button" data-act="share-app">📤 ' + esc(t('share_app')) + '</button>';
+    h += '</div>';
+
+    /* privacy card */
+    h += '<div class="privacy-card"><span class="pc-ic">🔒</span><div>' +
+      '<b style="font-size:13.5px">' + esc(t('privacy_title')) + '</b>' +
+      '<p>' + esc(t('privacy_note')) + '</p></div></div>';
+
+    /* changelog */
+    h += '<div class="sec-title" style="margin:4px 2px 9px;">' + esc(t('whats_new')) + '</div>';
+    h += '<div class="card set-group" id="changelog">';
+    CHANGELOG.forEach(function (rel, i) {
+      h += '<div class="cl-item' + (i === 0 ? ' open' : '') + '">' +
+        '<button class="cl-head" type="button" data-act="cl-toggle" data-i="' + i + '">' +
+          '<span><span class="cl-v">v' + esc(rel.v) + '</span><br><span class="cl-d">' + esc(rel.d) + '</span></span>' +
+          '<span class="cl-x">›</span>' +
+        '</button>' +
+        '<div class="cl-body"><ul>' + rel.items.map(function (it) { return '<li>' + esc(it) + '</li>'; }).join('') + '</ul></div>' +
+      '</div>';
+    });
+    h += '</div>';
+
+    /* footer */
+    h += '<div class="about-foot">Made with ❤️ by ' + esc(DEV_NAME) + '<br>© 2026</div>';
+    body.innerHTML = h;
+
+    /* easter egg: 7 taps on the app icon */
+    var icon = document.getElementById('aboutIcon');
+    if (icon) {
+      icon.addEventListener('click', function () {
+        UI.eggTaps = (UI.eggTaps || 0) + 1;
+        haptic('light');
+        if (UI.eggTaps >= 7) {
+          UI.eggTaps = 0;
+          haptic('success');
+          burstConfetti(icon, 'income');
+          setTimeout(function () { burstConfetti(icon, 'expense'); }, 220);
+          toast(t('egg_found'));
+        }
+      });
+    }
+  }
+
+  function shareApp() {
+    var url = location.origin + location.pathname;
+    var txt = APP_NAME + ' — ' + t('share_text');
+    haptic('light');
+    if (navigator.share) {
+      navigator.share({ title: APP_NAME, text: txt, url: url }).catch(function () { copyText(url, 'link_copied'); });
+    } else {
+      copyText(url, 'link_copied');
+    }
+  }
+
+  function sendFeedback() {
+    var msg = t('feedback_msg', { v: APP_VERSION, ua: (navigator.userAgent || '') });
+    var url = DEV_TG_URL + '?text=' + encodeURIComponent(msg);
+    haptic('light');
+    try { window.open(url, '_blank', 'noopener'); } catch (e) { copyText(msg, 'copied'); }
+  }
+
+  /* ======================================================================
+     3.10g  v4 · REMINDER (বাকির রিমাইন্ডার) helpers
+     ====================================================================== */
+  function waNumber(phone) {
+    var d = toAsciiDigits(String(phone || '')).replace(/\D/g, '');
+    if (!d) return '';
+    /* 01XXXXXXXXX → 8801XXXXXXXXX (Bangladesh) */
+    if (d.charAt(0) === '0') d = '88' + d;
+    else if (d.indexOf('880') !== 0) d = '880' + d;
+    return d;
+  }
+
+  function reminderMessage(p, bal, dueDate) {
+    var tpl = S.settings.messageTemplate || DEFAULT_MESSAGE_TEMPLATE;
+    return tpl
+      .replace(/\{name\}/g, personName(p))
+      .replace(/\{amount\}/g, money(Math.abs(bal)))
+      .replace(/\{date\}/g, dueDate ? shortDate(dueDate) : shortDate(todayIso()));
+  }
+
+  /** overdue state of a person: the earliest unpaid due date */
+  function personDueDate(personId) {
+    var dates = S.entries.filter(function (e) { return e.personId === personId && e.dir === 'gave' && e.dueDate && !e.settled; })
+      .map(function (e) { return e.dueDate; }).sort();
+    return dates.length ? dates[0] : null;
+  }
+
+  function overdueState(personId) {
+    var d = personDueDate(personId);
+    if (!d) return null;
+    var diff = dayDiff(todayIso(), d);   /* positive ⇒ in the future */
+    if (diff < 0) return 'overdue';
+    if (diff <= 3) return 'soon';
+    return null;
+  }
+
+  /* ======================================================================
+     3.10a  v4 · SHOP VIEW (দোকান মোড)
+     ====================================================================== */
+  function renderShop() {
+    var host = document.getElementById('view-shop');
+    if (!host) return;
+    if (!shopOn()) {
+      host.innerHTML = '<div class="card">' + emptyHTML('🏪', t('shop_mode'), t('shop_mode_sub')) +
+        '<button class="btn btn-primary btn-block" type="button" style="margin-top:12px" data-act="shop-toggle">' +
+        esc(t('shop_mode')) + '</button></div>';
+      return;
+    }
+    var st = shopStats();
+    var h = '';
+
+    h += '<div class="card hero">' +
+      '<div class="hero-label">' + esc(t('today_sales')) + '</div>' +
+      '<div class="hero-amount"><span class="cur">' + esc(S.settings.currency) + '</span>' +
+        '<span>' + money(st.todaySales, { sym: false }) + '</span></div>' +
+      '<div class="hero-chips">' +
+        '<div class="chip-stat"><span class="dot in"></span><div class="grow">' +
+          '<div class="c-lab">' + esc(t('today_profit')) + '</div>' +
+          '<div class="c-val" style="color:var(--income)">' + money(st.todayProfit) + '</div></div></div>' +
+        '<div class="chip-stat"><span class="dot ex"></span><div class="grow">' +
+          '<div class="c-lab">' + esc(t('stock_value')) + '</div>' +
+          '<div class="c-val">' + money(st.stockValue) + '</div></div></div>' +
+      '</div>' +
+    '</div>';
+
+    h += '<div class="quick">' +
+      '<button class="qbtn q-in" type="button" data-act="new-sale">' +
+        '<span class="q-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h15l-1.5 8H7.5Z"/><circle cx="9" cy="19" r="1.6"/><circle cx="17" cy="19" r="1.6"/></svg></span>' +
+        '<span class="q-tx">' + esc(t('new_sale')) + '</span></button>' +
+      '<button class="qbtn q-cr" type="button" data-act="new-product">' +
+        '<span class="q-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>' +
+        '<span class="q-tx">' + esc(t('add_product')) + '</span></button>' +
+      '<button class="qbtn q-ex" type="button" data-act="shop-report">' +
+        '<span class="q-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><rect x="5" y="12" width="3.4" height="6" rx="1.2"/><rect x="10.3" y="8" width="3.4" height="10" rx="1.2"/><rect x="15.6" y="4.5" width="3.4" height="13.5" rx="1.2"/></svg></span>' +
+        '<span class="q-tx">' + esc(t('shop_report')) + '</span></button>' +
+    '</div>';
+
+    h += '<div class="sec-head"><span class="sec-title">' + esc(t('shop_report')) + '</span></div>';
+    h += '<div class="grid3">' +
+      '<div class="card mini"><div class="m-lab">' + esc(t('month_sales')) + '</div><div class="m-val">' + money(st.monthSales) + '</div></div>' +
+      '<div class="card mini"><div class="m-lab">' + esc(t('month_profit')) + '</div><div class="m-val" style="color:var(--income)">' + money(st.monthProfit) + '</div></div>' +
+      '<div class="card mini"><div class="m-lab">' + esc(t('shop_sales')) + '</div><div class="m-val">' + num(String(S.sales.length)) + '</div></div>' +
+    '</div>';
+
+    if (st.low.length) {
+      h += '<div class="sec-head mt16"><span class="sec-title">' + esc(t('low_stock')) + '</span></div>';
+      h += '<div class="card"><div class="chips">' + st.low.map(function (p) {
+        return '<span class="chip" style="border-color:var(--expense)">⚠️ ' + esc(p.name) + ' · ' + num(String(p.qty)) + ' ' + esc(p.unit || '') + '</span>';
+      }).join('') + '</div></div>';
+    }
+
+    if (st.top.length) {
+      h += '<div class="sec-head mt16"><span class="sec-title">' + esc(t('top_products')) + '</span></div>';
+      var maxQ = st.top[0].qty || 1;
+      h += '<div class="card">' + st.top.map(function (p) {
+        return '<div class="budget-row"><span class="b-lab">' + esc(p.name) + '</span>' +
+          '<span class="b-mid"><span class="bar"><i style="width:' + Math.round((p.qty / maxQ) * 100) + '%;background:linear-gradient(90deg,#7B79F5,#2DD4BF)"></i></span></span>' +
+          '<span class="b-num">' + num(String(p.qty)) + '</span></div>';
+      }).join('') + '</div>';
+    }
+
+    h += '<div class="sec-head mt16"><span class="sec-title">' + esc(t('stock')) + '</span>' +
+      '<button class="sec-link" type="button" data-act="new-product">+ ' + esc(t('add')) + '</button></div>';
+    if (!S.products.length) {
+      h += '<div class="card">' + emptyHTML('📦', t('prod_none'), t('add_product')) + '</div>';
+    } else {
+      h += '<div class="shop-grid">' + S.products.map(function (p) {
+        var low = lowStock(p);
+        var out = Number(p.qty) <= 0;
+        return '<button class="prod" type="button" data-act="open-product" data-id="' + p.id + '">' +
+          '<span class="p-n">' + esc(p.name) + '</span>' +
+          '<span class="p-q">' + num(String(p.qty)) + ' ' + esc(p.unit || '') + ' · ' + esc(t('prod_buy')) + ' ' + money(p.buy) + '</span>' +
+          '<span class="p-pr">' + money(p.sell) + '</span>' +
+          (out ? '<span class="badge low">' + esc(t('out_of_stock')) + '</span>'
+               : (low ? '<span class="badge soon">' + esc(t('low_stock')) + '</span>'
+                      : '<span class="badge ok">' + esc(t('in_stock')) + '</span>')) +
+        '</button>';
+      }).join('') + '</div>';
+    }
+
+    if (S.sales.length) {
+      h += '<div class="sec-head mt16"><span class="sec-title">' + esc(t('shop_sales')) + '</span></div>';
+      h += '<div class="list">' + S.sales.slice().sort(function (a, b) { return b.createdAt - a.createdAt; }).slice(0, 12).map(function (s) {
+        return '<button class="tx-row" type="button" data-act="open-receipt" data-id="' + s.id + '" style="width:100%">' +
+          '<span class="grow" style="min-width:0;text-align:left"><span class="tx-name">' + esc(s.no) + '</span>' +
+          '<span class="tx-sub">' + esc(shortDate(s.date)) + (s.due > 0 ? ' <span class="badge due">' + esc(t('sale_due')) + '</span>' : '') + '</span></span>' +
+          '<span class="tx-amt in">' + money(s.total) + '</span></button>';
+      }).join('') + '</div>';
+    }
+
+    host.innerHTML = h;
+  }
+
+  /* ======================================================================
+     3.10z  v4 · SPLASH + ONBOARDING
+     ====================================================================== */
+  function hideSplash() {
+    var el = document.getElementById('splash');
+    if (!el) return;
+    el.classList.add('hide');
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 700);
+  }
+
+  var _onbIndex = 0;
+  function showOnboarding() {
+    var el = document.getElementById('onb');
+    if (!el) return;
+    el.classList.remove('hide');
+    _onbIndex = 0;
+    onbPaint();
+    onbBind();
+  }
+
+  function onbPaint() {
+    var track = document.getElementById('onbTrack');
+    if (track) track.style.transform = 'translateX(' + (-_onbIndex * 100) + '%)';
+    var dots = $$('#onbDots i');
+    dots.forEach(function (d, i) { d.classList.toggle('on', i === _onbIndex); });
+    var next = document.getElementById('onbNext');
+    if (next) next.textContent = _onbIndex >= 2 ? t('onb_start') : t('onb_next');
+    var lg = document.getElementById('onbLangSeg');
+    if (lg) positionSegPill(lg, S.settings.lang === 'en' ? 1 : 0);
+    var tg = document.getElementById('onbThemeSeg');
+    if (tg) positionSegPill(tg, ['auto', 'light', 'dark'].indexOf(S.settings.theme));
+  }
+
+  function onbFinish() {
+    S.settings.onboarded = true;
+    save(true);
+    var el = document.getElementById('onb');
+    if (el) el.classList.add('hide');
+    haptic('success');
+    applySettings(true);
+    go('home');
+  }
+
+  var _onbBound = false;
+  function onbBind() {
+    if (_onbBound) return;
+    _onbBound = true;
+    var next = document.getElementById('onbNext');
+    if (next) next.addEventListener('click', function () {
+      haptic('light');
+      if (_onbIndex >= 2) { onbFinish(); return; }
+      _onbIndex++;
+      onbPaint();
+    });
+    var skip = document.getElementById('onbSkip');
+    if (skip) skip.addEventListener('click', function () { haptic('light'); onbFinish(); });
+
+    var view = document.getElementById('onbView');
+    if (view) {
+      var sx = 0, sy = 0, live = false;
+      view.addEventListener('touchstart', function (e) {
+        if (e.touches.length !== 1) return;
+        sx = e.touches[0].clientX; sy = e.touches[0].clientY; live = true;
+      }, { passive: true });
+      view.addEventListener('touchend', function (e) {
+        if (!live) return;
+        live = false;
+        var t2 = e.changedTouches[0];
+        var dx = t2.clientX - sx, dy = t2.clientY - sy;
+        if (Math.abs(dx) < 42 || Math.abs(dx) < Math.abs(dy)) return;
+        if (dx < 0 && _onbIndex < 2) { _onbIndex++; haptic('light'); onbPaint(); }
+        else if (dx > 0 && _onbIndex > 0) { _onbIndex--; haptic('light'); onbPaint(); }
+      });
+    }
+  }
+
+  /* an existing user gets a one-time "what's new" note instead of onboarding */
+  function maybeWhatsNew() {
+    if (S.settings.whatsNewSeen) return;
+    var hadData = S.txs.length > 0 || S.people.length > 0;
+    S.settings.whatsNewSeen = true;
+    save();
+    if (!hadData) return;
+    askConfirm({
+      title: t('whatsnew_title'),
+      body: t('whatsnew_body'),
+      okText: t('whatsnew_ok'),
+      danger: false,
+      onOk: function () { closeAllSheets(); }
+    });
+  }
 
   /* ======================================================================
      3.11  BOOT
@@ -5447,21 +8460,14 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     }
   }
 
+  /*
+   * v4 · BOOT
+   * loadState() is now a PROMISE (IndexedDB). Everything that needs the data
+   * runs inside .then(); the splash is shown first so the app never looks
+   * frozen while the store opens, and it always lifts even if loading fails.
+   */
   function boot() {
-    S = loadState();
-    if (!S.settings.seeded) { S.settings.seeded = true; }
-    save(true);
-
-    /* first paint = skeletons so the app never flashes empty */
-    var homeHost = document.getElementById('view-home');
-    if (homeHost) {
-      homeHost.innerHTML =
-        '<div class="skel" style="height:150px;border-radius:28px;margin-bottom:14px;"></div>' +
-        '<div class="skel" style="height:92px;border-radius:22px;margin-bottom:14px;"></div>' +
-        skeletonHTML(4);
-    }
-
-    /* interface state (declared here so the whole file can use it) */
+    /* interface state — declared before anything can render */
     UI.view = 'home';
     UI.txDraft = null;
     UI.catDraft = null;
@@ -5473,20 +8479,77 @@ input[type="date"].input,input[type="search"].input{min-height:50px;}
     UI.catManage = false;
     UI.txSearchFocus = false;
     UI.repPeriod = 'monthly';
-    UI.wgMonth = todayIso().slice(0, 7);   /* v2: month shown by the summary widget */
+    UI.wgMonth = todayIso().slice(0, 7);
     UI.txFilter = { q: '', type: 'all', cat: 'all', method: 'all', range: 'all' };
+    UI.txLimit = 30;        /* v4 pagination window */
+    UI.eggTaps = 0;
+    UI.receiptSale = null;
 
-    applySettings(true);
-    localizeDigits();
-    go('home');
-    onScroll();
-    bindPullToRefresh();
-    initPWA();
+    /* show the splash immediately, and never let it outstay ~900ms */
+    setTimeout(hideSplash, 900);
 
-    /* PIN gate */
-    if (S.settings.pinOn && S.settings.pin) {
-      showLock('unlock');
-    }
+    loadState().then(function (loaded) {
+      S = loaded || buildSeedState();
+      if (!S.settings.seeded) S.settings.seeded = true;
+      if (!Array.isArray(S.transfers)) S.transfers = [];
+
+      /* catch up every recurring entry that came due while the app was shut */
+      var made = 0;
+      try { made = applyRecurring(); } catch (err) { warnOnce('recurring', 'রিকারিং এন্ট্রি তৈরি করা যায়নি'); }
+
+      save(true);
+      STORE_READY = STORE_READY || false;
+
+      /* theme/dark attribute, body flags, localStorage mirror */
+      applyShopMode(!!S.settings.shopMode);
+      applySettings(true);
+      localizeDigits();
+      go('home');
+      onScroll();
+      bindPullToRefresh();
+      initPWA();
+      bindImportInput();
+
+      /* ask for protected storage + read the usage figures (best effort) */
+      initPersist().then(function () { return refreshEstimate(); }).then(function () {
+        if (UI.view === 'settings') renderSettings();
+      }).catch(function () { warnOnce('persist', 'সুরক্ষিত স্টোরেজ চাওয়া যায়নি'); });
+
+      if (made) toast(t('recur_added_with', { n: String(num(made)) }));
+
+      selfCheck();
+
+      /* first launch ⇒ onboarding; an existing user ⇒ a one-time note */
+      if (!S.settings.onboarded) {
+        var hasData = S.txs.length > 0 || S.people.length > 0;
+        if (hasData) {
+          S.settings.onboarded = true;
+          save();
+          setTimeout(maybeWhatsNew, 500);
+        } else {
+          showOnboarding();
+        }
+      } else {
+        setTimeout(maybeWhatsNew, 500);
+      }
+
+      /* PIN gate */
+      if (S.settings.pinOn && S.settings.pin) showLock('unlock');
+    }).catch(function () {
+      /* pathological failure — open with an empty state rather than a blank screen */
+      warnOnce('boot', 'স্টেট লোড করা যায়নি — ফাঁকা অবস্থায় চালু হচ্ছে');
+      S = buildSeedState();
+      S.settings.seeded = true;
+      if (!Array.isArray(S.transfers)) S.transfers = [];
+      applySettings(true);
+      go('home');
+      bindPullToRefresh();
+      initPWA();
+      bindImportInput();
+      selfCheck();
+      hideSplash();
+      toast(t('store_failed'), 'warn');
+    });
   }
 
   /* UI state object — declared before boot() runs */
