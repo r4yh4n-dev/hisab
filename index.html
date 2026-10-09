@@ -1798,10 +1798,465 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   transition:transform .18s cubic-bezier(.34,1.56,.64,1);
 }
 .toast-btn:active{transform:scale(.94)}
+
+/* ============================================================================
+   1.30  v2.1.0 — SVG ICON SYSTEM, WALLET CARDS, LAYOUT FIXES, DEVELOPER
+   ----------------------------------------------------------------------------
+   Everything here is additive: the v2.0.0 rules above are untouched, and the
+   few overrides (wallet carousel, settings rows, topbar) are scoped so the
+   rest of the app keeps its exact previous look.
+   ============================================================================ */
+
+/* ---- 1.30a  icon primitives ------------------------------------------- */
+.ic{
+  width:20px;height:20px;display:block;flex:0 0 auto;
+  fill:none;stroke:currentColor;
+  stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;
+}
+.ic-sm{width:16px;height:16px;}
+.ic-lg{width:24px;height:24px;}
+.ic-xl{width:30px;height:30px;}
+/* a filled symbol (telegram, whatsapp, play…) must not inherit the stroke */
+.ic[data-fill="1"]{fill:currentColor;stroke:none;}
+
+/* the rounded glass tile every icon sits in — tinted with the item's colour */
+.ic-tile{
+  flex:0 0 auto;display:grid;place-items:center;
+  width:38px;height:38px;border-radius:13px;
+  background:var(--tile-bg, rgba(120,130,150,.14));
+  color:var(--tile-fg, var(--text-2));
+  border:1px solid var(--tile-br, transparent);
+  box-shadow:inset 0 1px 0 var(--glass-inner);
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+.ic-tile .ic{width:19px;height:19px;}
+.ic-tile.sm{width:32px;height:32px;border-radius:11px;}
+.ic-tile.sm .ic{width:16px;height:16px;}
+.ic-tile.lg{width:44px;height:44px;border-radius:15px;}
+.ic-tile.lg .ic{width:22px;height:22px;}
+.ic-tile.xl{width:56px;height:56px;border-radius:19px;}
+.ic-tile.xl .ic{width:28px;height:28px;}
+
+/* the settings-row icon keeps its old 34px footprint but is now an SVG tile */
+.set-item .si-ic{
+  width:34px;height:34px;border-radius:12px;
+  display:grid;place-items:center;
+  background:var(--tile-bg, rgba(120,130,150,.14));
+  color:var(--tile-fg, var(--text-2));
+  font-size:0;   /* no emoji text can leak through */
+}
+.set-item .si-ic .ic{width:18px;height:18px;}
+
+/* ---- 1.30b  SETTINGS ROWS — title line 1, subtitle line 2 ------------- */
+.set-item{
+  display:flex;align-items:center;gap:12px;
+  padding:14px;                 /* was 12px 14px — now a true 14px box */
+  min-height:62px;
+}
+.set-item .si-t{
+  flex:1 1 auto;min-width:0;
+  display:flex;flex-direction:column;justify-content:center;gap:2px;
+}
+.set-item .si-t .si-l{
+  font-size:14.5px;font-weight:600;line-height:1.3;
+  display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.set-item .si-t .si-s{
+  font-size:11.5px;color:var(--text-3);line-height:1.35;
+  display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.set-val{
+  flex:0 0 auto;display:flex;align-items:center;gap:6px;
+  font-size:13.5px;font-weight:600;color:var(--text-3);
+  max-width:42%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.set-val .ic{width:15px;height:15px;opacity:.7;}
+
+/* ---- 1.30c  TOPBAR — one title visible, smooth cross-fade ------------- */
+.topbar .tb-text{position:relative;}
+/* v2.1.0 FIX — the eyebrow and the title carry the SAME string, so showing
+   both at once printed the section name twice ("সেটিংস" / "সেটিংস").
+   Exactly ONE is visible at any scroll position, cross-fading between them:
+     · at the top  → the large title only
+     · scrolled    → the small uppercase eyebrow only
+   Both rules below override the earlier .topbar block (same specificity,
+   later in the sheet wins). */
+.topbar .tb-eyebrow{
+  opacity:0;height:0;overflow:hidden;
+  transform-origin:left bottom;
+  transition:opacity .26s var(--ease), height .26s var(--ease), transform .26s var(--ease);
+}
+.topbar .tb-title{
+  opacity:1;font-size:30px;
+  transform-origin:left bottom;
+  transition:font-size .28s var(--ease), opacity .28s var(--ease), height .28s var(--ease);
+}
+.topbar.collapsed .tb-eyebrow{opacity:.95;height:auto;transform:none;}
+.topbar.collapsed .tb-title{opacity:0;height:0;overflow:hidden;font-size:19px;}
+
+/* ---- 1.30d  STORAGE ROW — used size + thin progress bar --------------- */
+.stor-bar{
+  height:5px;border-radius:99px;margin-top:7px;
+  background:rgba(120,130,150,.2);overflow:hidden;
+}
+.stor-bar > i{
+  display:block;height:100%;border-radius:99px;
+  background:linear-gradient(90deg,#7B79F5,#5E5CE6 55%,#2DD4BF);
+  transition:width .6s var(--ease);
+}
+.stor-note{font-size:11px;color:var(--text-3);margin-top:5px;}
+
+/* ---- 1.30e  WALLET CARDS (v2.1.0 redesign) ---------------------------- */
+/* the hero total above the carousel */
+.whero{
+  position:relative;overflow:hidden;
+  padding:16px 18px 15px;border-radius:24px;margin-bottom:12px;
+  background:var(--surface-2);
+  -webkit-backdrop-filter:blur(22px) saturate(175%);backdrop-filter:blur(22px) saturate(175%);
+  border:1px solid var(--glass-brd);
+  box-shadow:var(--sh-2), inset 0 1px 0 var(--glass-inner);
+}
+.whero .wh-lab{
+  font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-3);
+}
+.whero .wh-amt{
+  display:flex;align-items:baseline;gap:3px;margin-top:5px;
+  font-variant-numeric:tabular-nums;
+}
+.whero .wh-cur{font-size:19px;font-weight:600;color:var(--text-3);}
+.whero .wh-num{
+  font-size:31px;font-weight:700;letter-spacing:-.03em;line-height:1.1;
+  font-variant-numeric:tabular-nums;
+}
+.whero .wh-num.neg{color:var(--expense);}
+/* the segmented share bar */
+.wseg{
+  display:flex;gap:3px;height:7px;margin-top:13px;
+  border-radius:99px;overflow:hidden;background:rgba(120,130,150,.16);
+}
+.wseg > i{
+  display:block;height:100%;border-radius:99px;
+  transition:width .7s var(--ease), opacity .3s var(--ease);
+}
+.wseg > i.dim{opacity:.32;}
+
+/* the carousel itself */
+.wcar{
+  display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+  padding:4px 16px 12px;margin:0 -16px;
+  scrollbar-width:none;
+}
+.wcar::-webkit-scrollbar{display:none;}
+.wcard{
+  position:relative;overflow:hidden;
+  flex:0 0 auto;scroll-snap-align:start;
+  width:62vw;min-width:170px;max-width:250px;height:124px;
+  padding:14px 15px;border-radius:20px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  text-align:left;
+  background:var(--wc-grad, var(--surface-2));
+  -webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);
+  border:1px solid var(--glass-brd);
+  box-shadow:var(--sh-2), inset 0 1px 0 var(--glass-inner);
+  transition:transform .22s cubic-bezier(.34,1.56,.64,1);
+}
+.wcard:active{transform:scale(.965);}
+/* the soft moving sheen */
+.wcard::after{
+  content:"";position:absolute;inset:-40% -60%;
+  background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.34) 50%,transparent 62%);
+  transform:translateX(-70%);
+  animation:wSheen 5.5s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes wSheen{0%,72%{transform:translateX(-70%);}100%{transform:translateX(70%);}}
+.wcard .wc-top{display:flex;align-items:center;gap:9px;min-width:0;}
+.wcard .wc-ic{
+  flex:0 0 auto;width:34px;height:34px;border-radius:12px;
+  display:grid;place-items:center;color:#fff;
+  background:rgba(255,255,255,.22);
+  border:1px solid rgba(255,255,255,.3);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4);
+}
+.wcard .wc-ic .ic{width:18px;height:18px;}
+.wcard .wc-t{
+  font-size:12.5px;font-weight:600;line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  color:var(--wc-fg, var(--text));
+}
+.wcard .wc-bot{display:flex;flex-direction:column;gap:1px;}
+.wcard .wc-lab{
+  font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--wc-fg, var(--text-3));opacity:.72;
+}
+.wcard .wc-v{
+  display:flex;align-items:baseline;gap:2px;
+  font-variant-numeric:tabular-nums;
+}
+.wcard .wc-cur{font-size:14px;font-weight:600;opacity:.72;}
+.wcard .wc-num{
+  font-size:23px;font-weight:700;letter-spacing:-.025em;line-height:1.15;
+  font-variant-numeric:tabular-nums;
+}
+.wcard.neg .wc-num{color:#FF453A;}
+.wcard.add{
+  display:grid;place-items:center;width:86px;min-width:86px;
+  color:var(--accent);border-style:dashed;background:var(--surface-2);
+}
+.wcard.add .ic{width:26px;height:26px;}
+
+/* dot indicators */
+.wdots{display:flex;justify-content:center;gap:6px;margin:2px 0 4px;}
+.wdots > i{
+  display:block;width:6px;height:6px;border-radius:99px;
+  background:var(--text-3);opacity:.34;
+  transition:width .3s var(--ease), opacity .3s var(--ease), background .3s var(--ease);
+}
+.wdots > i.on{width:18px;opacity:1;background:var(--accent);}
+
+/* the transfer link as a glass pill */
+.wpill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 13px;border-radius:99px;
+  font-size:12.5px;font-weight:600;color:var(--accent);
+  background:rgba(94,92,230,.12);
+  border:1px solid rgba(94,92,230,.22);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+.wpill:active{transform:scale(.95);}
+.wpill .ic{width:15px;height:15px;}
+
+/* wallet detail sheet */
+.wdet-hero{
+  position:relative;overflow:hidden;
+  padding:18px;border-radius:22px;margin-bottom:14px;
+  background:var(--wc-grad, var(--surface-2));
+  border:1px solid var(--glass-brd);
+  box-shadow:var(--sh-2), inset 0 1px 0 var(--glass-inner);
+}
+.wdet-hero .wd-lab{font-size:11.5px;font-weight:600;opacity:.75;color:var(--wc-fg,var(--text-3));}
+.wdet-hero .wd-amt{
+  display:flex;align-items:baseline;gap:3px;margin-top:4px;
+  font-variant-numeric:tabular-nums;color:var(--wc-fg,var(--text));
+}
+.wdet-hero .wd-cur{font-size:17px;font-weight:600;opacity:.75;}
+.wdet-hero .wd-num{font-size:29px;font-weight:700;letter-spacing:-.03em;}
+.wdet-io{display:flex;gap:10px;margin-top:14px;}
+.wdet-io > div{
+  flex:1 1 0;padding:9px 11px;border-radius:14px;
+  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.2);
+}
+.wdet-io .l{font-size:10.5px;font-weight:600;opacity:.75;color:var(--wc-fg,var(--text-3));}
+.wdet-io .v{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--wc-fg,var(--text));}
+
+/* ---- 1.30f  CATEGORY ICON GRID (replaces the emoji keyboard) ---------- */
+.ic-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));
+  gap:8px;max-height:212px;overflow-y:auto;padding:2px;
+}
+.ic-pick{
+  aspect-ratio:1;border-radius:14px;display:grid;place-items:center;
+  background:var(--surface-2);border:1px solid var(--glass-brd);
+  color:var(--text-2);
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1), background .2s ease, color .2s ease;
+}
+.ic-pick:active{transform:scale(.9);}
+.ic-pick.on{
+  background:var(--tile-bg, rgba(94,92,230,.16));
+  color:var(--tile-fg, var(--accent));
+  border-color:var(--tile-fg, var(--accent));
+  box-shadow:0 0 0 2px var(--tile-bg, rgba(94,92,230,.16));
+}
+.ic-pick .ic{width:21px;height:21px;}
+
+/* the category summary strip must wrap, never overlap the count */
+.cat-strip{
+  display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;
+  max-height:44px;overflow:hidden;
+}
+.cat-strip .ic-tile{width:26px;height:26px;border-radius:9px;}
+.cat-strip .ic-tile .ic{width:14px;height:14px;}
+
+/* ---- 1.30g  DEVELOPER SECTION + SHEET --------------------------------- */
+.dev-card{
+  display:flex;align-items:center;gap:13px;width:100%;text-align:left;
+  padding:15px;border-radius:22px;
+  background:var(--surface-2);
+  -webkit-backdrop-filter:blur(22px) saturate(175%);backdrop-filter:blur(22px) saturate(175%);
+  border:1px solid var(--glass-brd);
+  box-shadow:var(--sh-2), inset 0 1px 0 var(--glass-inner);
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+.dev-card:active{transform:scale(.975);}
+.dev-av{
+  flex:0 0 auto;width:52px;height:52px;border-radius:17px;
+  display:grid;place-items:center;
+  font-size:19px;font-weight:800;letter-spacing:-.02em;color:#fff;
+  background:linear-gradient(135deg,#7B79F5,#5E5CE6 45%,#2DD4BF);
+  box-shadow:0 10px 22px -10px rgba(94,92,230,.9), inset 0 1px 0 rgba(255,255,255,.4);
+}
+.dev-card .dc-t{flex:1 1 auto;min-width:0;}
+.dev-card .dc-n{font-size:15px;font-weight:700;letter-spacing:-.01em;}
+.dev-card .dc-s{font-size:11.5px;color:var(--text-3);line-height:1.4;margin-top:2px;}
+.dev-card .dc-x{flex:0 0 auto;color:var(--text-3);}
+.dev-card .dc-x .ic{width:17px;height:17px;}
+
+/* the full-height developer sheet */
+.dev-hero{
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:8px 0 18px;
+}
+.dev-hero .dh-av{
+  position:relative;width:88px;height:88px;border-radius:28px;
+  display:grid;place-items:center;
+  font-size:31px;font-weight:800;letter-spacing:-.03em;color:#fff;
+  background:linear-gradient(135deg,#7B79F5,#5E5CE6 45%,#2DD4BF);
+  box-shadow:0 18px 40px -16px rgba(94,92,230,.95), inset 0 1px 0 rgba(255,255,255,.45);
+}
+.dev-hero .dh-av::after{
+  content:"";position:absolute;inset:-14px;border-radius:38px;
+  background:radial-gradient(closest-side,rgba(94,92,230,.34),transparent 72%);
+  z-index:-1;
+}
+.dev-hero .dh-n{font-size:21px;font-weight:700;letter-spacing:-.02em;margin-top:16px;}
+.dev-hero .dh-b{font-size:13px;color:var(--text-2);line-height:1.65;margin-top:7px;max-width:290px;}
+.dev-hero .dh-v{
+  display:inline-flex;align-items:center;gap:5px;margin-top:11px;
+  padding:5px 12px;border-radius:99px;font-size:11.5px;font-weight:700;
+  color:var(--accent);background:rgba(94,92,230,.13);
+  border:1px solid rgba(94,92,230,.22);
+}
+.dev-foot{
+  text-align:center;font-size:11.5px;color:var(--text-3);
+  line-height:1.8;padding:16px 0 4px;
+}
+.dev-foot .ic{display:inline-block;vertical-align:-3px;width:13px;height:13px;color:#FF2D55;}
+
+/* ---- 1.30h  reduced motion ------------------------------------------- */
+@media (prefers-reduced-motion: reduce){
+  .wcard::after{animation:none;opacity:0;}
+  .wcard,.ic-tile,.dev-card,.wpill,.ic-pick{transition:none;}
+  .wseg > i,.stor-bar > i{transition:none;}
+}
+
 </style>
 </head>
 
 <body data-view="home" data-shop="false">
+
+<!-- ==========================================================================
+     SVG ICON SPRITE (v2.1.0) — SF-Symbols style, 24x24, stroke=currentColor.
+     Used everywhere via <svg class="ic"><use href="#i-name"/></svg>.
+     No external icon library: this is the whole set, inline.
+     ========================================================================== -->
+<svg id="iconSprite" width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.4 12 3.6l8.5 6.8V19a1.6 1.6 0 0 1-1.6 1.6H15v-6H9v6H5.1A1.6 1.6 0 0 1 3.5 19Z"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M14 4.5 17.5 8 14 11.5"/><path d="M20 16H7M10 12.5 6.5 16 10 19.5"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H17a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M4 17h15"/><circle cx="11.5" cy="8.5" r="2.2"/><path d="M8.6 13.2a3.2 3.2 0 0 1 5.8 0"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><rect x="5" y="12" width="3.4" height="6" rx="1.2"/><rect x="10.3" y="8" width="3.4" height="10" rx="1.2"/><rect x="15.6" y="4.5" width="3.4" height="13.5" rx="1.2"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 14.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6 1h.2a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 1 0 6 8c0 6-2.5 7-2.5 7h17S18 14 18 8Z"/><path d="M10.3 19a2 2 0 0 0 3.4 0"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h11a2 2 0 0 1 2 2v1"/><path d="M3.5 7.5v9a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-15"/><circle cx="16.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-cash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/></symbol>
+    <symbol id="i-phone-pay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.6"/><path d="M10.5 5.5h3"/><path d="M9.5 12.5h5M12 10v5"/></symbol>
+    <symbol id="i-bank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9.5 12 4l8.5 5.5"/><path d="M5.5 9.5v8M10 9.5v8M14 9.5v8M18.5 9.5v8"/><path d="M3.5 20.5h17"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.4"/><path d="M2.5 9.5h19"/><path d="M6 14.5h4"/></symbol>
+    <symbol id="i-food" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7a2.5 2.5 0 0 0 5 0V3"/><path d="M8.5 10v11"/><path d="M16.5 3c-1.4 1.6-2 3.4-2 5.4 0 1.6.7 2.6 2 2.6s2-1 2-2.6c0-2-.6-3.8-2-5.4Z"/><path d="M16.5 11v10"/></symbol>
+    <symbol id="i-bus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3.5" width="16" height="13" rx="2.4"/><path d="M4 10h16"/><path d="M7.5 16.5v2M16.5 16.5v2"/><circle cx="8" cy="13.5" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="13.5" r="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17.5h6"/><path d="M10 20.5h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .8 1.6h5.4c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3Z"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2.2l2.3 10.4a1.6 1.6 0 0 0 1.6 1.3h7.6a1.6 1.6 0 0 0 1.6-1.2L20 7.5H6"/><circle cx="9.5" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/></symbol>
+    <symbol id="i-money-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 3h5l-1.2 3.2h-2.6Z"/><path d="M10.7 6.2C7.6 7.6 5.5 10.6 5.5 14a6.5 6.5 0 0 0 13 0c0-3.4-2.1-6.4-5.2-7.8"/><path d="M12 11v6M10.4 12.6h3.2M10.4 15.4h3.2"/></symbol>
+    <symbol id="i-trend-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 16.5 9 11l3.5 3.5L20.5 6.5"/><path d="M15.5 6.5h5v5"/></symbol>
+    <symbol id="i-trend-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5 9 13l3.5-3.5 8-8"/><path d="M15.5 17.5h5v-5"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7.5-4.6-7.5-9.6A4.4 4.4 0 0 1 12 7.6a4.4 4.4 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20Z"/></symbol>
+    <symbol id="i-health" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5v15M4.5 12h15"/><rect x="3" y="3" width="18" height="18" rx="4.5"/></symbol>
+    <symbol id="i-education" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 12 4l9 4.5-9 4.5Z"/><path d="M6.5 10.6V16c0 1.4 2.5 2.6 5.5 2.6s5.5-1.2 5.5-2.6v-5.4"/></symbol>
+    <symbol id="i-entertainment" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.6"/><path d="M8 5v14M16 5v14M2.5 9.5h19M2.5 14.5h19"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="17" height="4" rx="1.2"/><path d="M5 12.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-6.5"/><path d="M12 8.5v12"/><path d="M12 8.5S10.8 4 8.6 4a2.3 2.3 0 0 0 0 4.5Z"/><path d="M12 8.5S13.2 4 15.4 4a2.3 2.3 0 0 1 0 4.5Z"/></symbol>
+    <symbol id="i-house" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.4 12 3.6l8.5 6.8V19a1.6 1.6 0 0 1-1.6 1.6H5.1A1.6 1.6 0 0 1 3.5 19Z"/><path d="M9.5 20.5v-6h5v6"/></symbol>
+    <symbol id="i-shirt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.5 5 5.5 3.5 10l3 1.2V20a.5.5 0 0 0 .5.5h10a.5.5 0 0 0 .5-.5v-8.8l3-1.2L19 5.5l-4-2"/><path d="M9 3.5a3 3 0 0 0 6 0"/></symbol>
+    <symbol id="i-mobile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.6"/><path d="M10.5 5.5h3"/><circle cx="12" cy="18" r="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8.5a15 15 0 0 1 19 0"/><path d="M5.5 12a10.5 10.5 0 0 1 13 0"/><path d="M8.5 15.4a6 6 0 0 1 7 0"/><circle cx="12" cy="19" r="1.1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-fuel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5V5.5A1.5 1.5 0 0 1 5.5 4h6A1.5 1.5 0 0 1 13 5.5v15"/><path d="M3 20.5h11"/><path d="M4 11h9"/><path d="M13 8.5h3.5a2 2 0 0 1 2 2v6a1.6 1.6 0 0 0 3.2 0V9.5l-2-2"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6"/><path d="M18 3v3.4h-3.4M6 21v-3.4h3.4"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10" width="15" height="10.5" rx="2.4"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10"/><circle cx="12" cy="15.2" r="1.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2 5 6v6c0 4.2 2.9 7.6 7 8.8 4.1-1.2 7-4.6 7-8.8V6Z"/><path d="m9.2 12 2 2 3.6-3.8"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M4.5 19.5h15"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5v-11"/><path d="m7.5 13.5 4.5-4.5 4.5 4.5"/><path d="M4.5 4.5h15"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-broom" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5 9 9"/><path d="M11.5 6.5 17 12"/><path d="M8.5 9.5 4 14a4.5 4.5 0 0 0 6.4 6.4l4.5-4.5Z"/><path d="m6.5 15.5 2 2"/></symbol>
+    <symbol id="i-warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.2 2.8 19.5h18.4Z"/><path d="M12 10v4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9.5 7V5h5v2"/><path d="M7 7l1 13h8l1-13"/><path d="M10.5 10.5v6M13.5 10.5v6"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10a2.4 2.4 0 0 0-3.4-3.4L4.6 16.6Z"/><path d="m13.5 7.5 3 3"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11"/><path d="m8 7.5 4-4 4 4"/><path d="M5.5 13v6a1.5 1.5 0 0 0 1.5 1.5h10a1.5 1.5 0 0 0 1.5-1.5v-6"/></symbol>
+    <symbol id="i-bug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="7.5" y="7" width="9" height="12" rx="4.5"/><path d="M9.5 7V5.5a2.5 2.5 0 0 1 5 0V7"/><path d="M7.5 11H3.5M20.5 11h-4M7.5 15H4M20 15h-3.5M8.5 18.5 6 21M15.5 18.5 18 21"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5 3.5 10.2l6.3 2.5 2.5 6.3Z"/><path d="m9.8 12.7 4.4-4.4"/></symbol>
+    <symbol id="i-telegram" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21.5 3.3 2.6 10.6c-.9.4-.9 1.6 0 1.9l4.5 1.5 1.7 5.2c.2.8 1.2 1 1.7.3l2.3-2.8 4.4 3.3c.6.5 1.5.1 1.7-.7l3-13.3c.2-.9-.7-1.6-1.4-1.3ZM9.6 14.4l8-6.2-6.7 7.5-.3 3-1-4.3Z"/></symbol>
+    <symbol id="i-whatsapp" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2.2A9.7 9.7 0 0 0 3.6 16.8L2.2 21.8l5.2-1.4A9.7 9.7 0 1 0 12 2.2Zm5.6 13.7c-.2.7-1.4 1.3-2 1.4-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-3-1.3-4.9-4.3-5-4.5-.2-.2-1.2-1.6-1.2-3s.7-2.1 1-2.4c.2-.3.5-.4.7-.4h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.1.5.1.7-.1l.9-1c.2-.2.4-.2.6-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.4Z"/></symbol>
+    <symbol id="i-sms" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12.5a7.5 7.5 0 0 1-7.5 7.5H8l-4.5 2.5.9-4.2A7.5 7.5 0 0 1 13 5a7.5 7.5 0 0 1 7.5 7.5Z"/><path d="M9 12h.01M13 12h.01M17 12h.01"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.2 2.4 3.3 5.3 3.3 8.5S14.2 18.1 12 20.5c-2.2-2.4-3.3-5.3-3.3-8.5S9.8 5.9 12 3.5Z"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.2 0 2-.9 2-2 0-.6-.2-1-.6-1.4-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h1.6a4 4 0 0 0 4-4c0-3.5-3.8-6.3-8.5-6.3Z"/><circle cx="8" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r="1.1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-digits" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="3"/><path d="M7.5 8.5h2v7M14 8.5h2.5a1.5 1.5 0 0 1 0 3H14h2.5a1.5 1.5 0 0 1 0 3H14"/></symbol>
+    <symbol id="i-confetti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5 9 9l6 6Z"/><path d="M14 3.5v2M19.5 6l-1.4 1.4M21 12h-2M17 17.5l1.4 1.4M11 3.5v1.5"/><circle cx="17.5" cy="10.5" r="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-store" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5h16v2a2.4 2.4 0 0 1-4.8 0 2.4 2.4 0 0 1-4.8 0 2.4 2.4 0 0 1-4.8 0Z"/><path d="M5.5 12.6V20h13v-7.4"/><path d="M10 20v-4.6h4V20"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5 12 3.5l8.5 4v9L12 20.5l-8.5-4Z"/><path d="M3.5 7.5 12 11.5l8.5-4M12 11.5v9"/></symbol>
+    <symbol id="i-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 3.5h13v17l-2.2-1.5-2.2 1.5-2.1-1.5-2.2 1.5-2.3-1.5Z"/><path d="M9 8h6M9 11.5h6M9 15h3.5"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.8 20.2a7.2 7.2 0 0 1 14.4 0"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.8 19.5a6.2 6.2 0 0 1 12.4 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M17.5 14.2a6.2 6.2 0 0 1 3.7 5.3"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.4"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4.5 4.5"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5h17l-6.5 7.6v5.4l-4 2v-7.4Z"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s6.5-6 6.5-11a6.5 6.5 0 1 0-13 0C5.5 15 12 21 12 21Z"/><circle cx="12" cy="10" r="2.4"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3.8 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 10l5.9-.9Z"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 3.5H20v8.5l-8.6 8.6a1.6 1.6 0 0 1-2.3 0l-6.2-6.2a1.6 1.6 0 0 1 0-2.3Z"/><circle cx="16.2" cy="7.8" r="1.3" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-briefcase" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7.5" width="18" height="12" rx="2.4"/><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5"/><path d="M3 12.5h18"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.5 12H2.1M21.9 12h-2.4M6.7 6.7 5 5M19 19l-1.7-1.7M6.7 17.3 5 19M19 5l-1.7 1.7"/></symbol>
+    <symbol id="i-abacus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2.4"/><path d="M3.5 9h17M3.5 15h17"/><circle cx="8" cy="6.2" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="6.2" r="1.2" fill="currentColor" stroke="none"/><circle cx="11" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="17" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="7" cy="18" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="18" r="1.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-plane" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5a1.5 1.5 0 0 1 3 0V9l7.5 4.5v2.2l-7.5-2.2v4l2.5 2v1.8l-4-1.2-4 1.2v-1.8l2.5-2v-4L3 15.7v-2.2L10.5 9Z"/></symbol>
+    <symbol id="i-coffee" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5Z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M7 3.5v2M10.5 3.5v2M14 3.5v2"/></symbol>
+    <symbol id="i-paw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="7" cy="9" rx="1.9" ry="2.4"/><ellipse cx="12" cy="7" rx="1.9" ry="2.4"/><ellipse cx="17" cy="9" rx="1.9" ry="2.4"/><path d="M12 12.5c3 0 5 2 5 4.2 0 1.6-1.3 2.8-3 2.8-1 0-1.4-.4-2-.4s-1 .4-2 .4c-1.7 0-3-1.2-3-2.8 0-2.2 2-4.2 5-4.2Z"/></symbol>
+    <symbol id="i-tools" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5a3.5 3.5 0 0 1 4.6-3.3l-2.4 2.4 1.7 1.7 2.4-2.4a3.5 3.5 0 0 1-4.4 4.5L6.8 19.9a1.7 1.7 0 0 1-2.4-2.4Z"/></symbol>
+    <symbol id="i-cap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9 12 4.5 21.5 9 12 13.5Z"/><path d="M6.5 11v4.5c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5V11"/><path d="M21.5 9v5"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="4.2"/><path d="m11 11 8.5 8.5M16.5 16.5l2-2M14 14l2-2"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h3l1.5 4-2 1.5a11 11 0 0 0 6 6l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.5 5.7a2 2 0 0 1 2-2.2Z"/></symbol>
+    <symbol id="i-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a7.5 7.5 0 0 1-7.5 7.5H8l-4.5 2.5.9-4.2A7.5 7.5 0 0 1 13 5a7.5 7.5 0 0 1 7.5 7Z"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9V3.5h10V9"/><rect x="3.5" y="9" width="17" height="7.5" rx="2"/><path d="M7 14h10v6.5H7Z"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h7.5L19 9v11.5H6Z"/><path d="M13.5 3.5V9H19"/><path d="M9 13h6M9 16.5h4"/></symbol>
+    <symbol id="i-database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></symbol>
+    <symbol id="i-cloud-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18.5h9.5a4 4 0 0 0 1.2-7.8A5.5 5.5 0 0 0 8.2 8.4"/><path d="M6.4 10.2A4.5 4.5 0 0 0 7 18.5"/><path d="M3.5 3.5 20.5 20.5"/></symbol>
+    <symbol id="i-arrow-up-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></symbol>
+    <symbol id="i-arrow-down-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17M15 17H7V9"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5.5v13l10-6.5Z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="7" y="5.5" width="3.4" height="13" rx="1.2"/><rect x="13.6" y="5.5" width="3.4" height="13" rx="1.2"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.6"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3.5 8.5 4.3L12 12.1 3.5 7.8Z"/><path d="m3.5 12.2 8.5 4.3 8.5-4.3"/><path d="m3.5 16.4 8.5 4.3 8.5-4.3"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v4.5h-4.5"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1.5 1.5"/><path d="M14 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1.5-1.5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="12" height="12" rx="2.2"/><path d="M15.5 8.5v-2a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></symbol>
+    <symbol id="i-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" stroke="none" opacity=".28"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.8 9l5.5 1.8-5.5 1.8L12 18l-1.8-5.4L4.7 10.8 10.2 9Z"/><path d="M18.5 3.5v3M20 5h-3"/></symbol>
+    <symbol id="i-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c3.5 1.5 5.5 5 5.5 9l-2.5 3h-6l-2.5-3c0-4 2-7.5 5.5-9Z"/><circle cx="12" cy="10" r="1.8"/><path d="M9 15.5 7 20l3-1.5M15 15.5 17 20l-3-1.5"/></symbol>
+    <symbol id="i-currency" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6.5h10M7 10h10M12 6.5v11"/><path d="M8.5 13.5 12 17.5l3.5-4"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.4"/><circle cx="9" cy="10" r="1.6"/><path d="m4.5 17 4.5-4.5 3.5 3.5 3-3 4 4"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  </defs>
+</svg>
+
 
 <!-- ==========================================================================
      SPLASH — decorative only. boot() runs in parallel; the splash fades at
@@ -1821,17 +2276,17 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   <div class="onb-view" id="onbView">
     <div class="onb-track" id="onbTrack">
       <div class="onb-slide">
-        <div class="onb-art">📄</div>
+        <div class="onb-art"><svg class="ic ic-xl" aria-hidden="true"><use href="#i-book"/></svg></div>
         <div class="onb-h">হিসাব রাখুন সহজে</div>
         <p class="onb-p">আয়, খরচ আর বাকি — সব একসাথে এক জায়গায়। কথায় বলে দিলেই হিসাব লিখে নেবে।</p>
       </div>
       <div class="onb-slide">
-        <div class="onb-art">🔐</div>
+        <div class="onb-art"><svg class="ic ic-xl" aria-hidden="true"><use href="#i-lock"/></svg></div>
         <div class="onb-h">ডেটা থাকবে আপনার কাছেই</div>
         <p class="onb-p">সব হিসাব শুধু আপনার ফোনে জমা থাকে — ইন্টারনেট ছাড়াও কাজ করে। চাইলে ব্যাকআপ নিতে পারবেন।</p>
       </div>
       <div class="onb-slide">
-        <div class="onb-art">✨</div>
+        <div class="onb-art"><svg class="ic ic-xl" aria-hidden="true"><use href="#i-sparkle"/></svg></div>
         <div class="onb-h">শুরু করুন</div>
         <p class="onb-p">পছন্দমতো ভাষা আর থিম বেছে নিন — পরে সেটিংস থেকেও বদলাতে পারবেন।</p>
         <div style="width:100%;max-width:320px;" class="onb-choice">
@@ -2137,7 +2592,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   </div>
   <div class="sheet-body" id="voiceBody"></div>
   <div class="sheet-foot">
-    <button class="btn btn-ghost btn-sm" type="button" id="voiceAgain">🎙️ আবার বলুন</button>
+    <button class="btn btn-ghost btn-sm" type="button" id="voiceAgain"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg> আবার বলুন</button>
     <button class="btn btn-primary grow" type="button" id="voiceSave">এডিট করে সেভ</button>
   </div>
 </div>
@@ -2171,6 +2626,30 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   <div class="sheet-foot">
     <button class="btn btn-primary grow" type="button" id="transferSaveBtn">ট্রান্সফার করুন</button>
   </div>
+</div>
+
+<!-- ================= SHEET · WALLET DETAIL (v2.1.0) ================= -->
+<div class="sheet" id="sheetWalletDetail" role="dialog" aria-modal="true" aria-labelledby="sheetWalletDetailTitle">
+  <div class="sheet-grip"><span></span></div>
+  <div class="sheet-head">
+    <h2 id="sheetWalletDetailTitle" data-i18n="wallet_balances">ওয়ালেট</h2>
+    <button class="icon-btn" type="button" data-close-sheet="sheetWalletDetail" aria-label="বন্ধ করুন">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="walletDetailBody"></div>
+</div>
+
+<!-- ================= SHEET · DEVELOPER (v2.1.0) ================= -->
+<div class="sheet" id="sheetDev" role="dialog" aria-modal="true" aria-labelledby="sheetDevTitle">
+  <div class="sheet-grip"><span></span></div>
+  <div class="sheet-head">
+    <h2 id="sheetDevTitle" data-i18n="developer">ডেভেলপার</h2>
+    <button class="icon-btn" type="button" data-close-sheet="sheetDev" aria-label="বন্ধ করুন">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="devBody"></div>
 </div>
 
 <!-- ================= SHEET · RECURRING MANAGER (v4) ================= -->
@@ -2242,8 +2721,8 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   </div>
   <div class="sheet-body" id="receiptBody"></div>
   <div class="sheet-foot">
-    <button class="btn btn-ghost btn-sm" type="button" data-act="receipt-share">📤 শেয়ার</button>
-    <button class="btn btn-primary grow" type="button" data-act="receipt-print">🖨️ প্রিন্ট / PDF</button>
+    <button class="btn btn-ghost btn-sm" type="button" data-act="receipt-share"><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg> শেয়ার</button>
+    <button class="btn btn-primary grow" type="button" data-act="receipt-print"><svg class="ic" aria-hidden="true"><use href="#i-print"/></svg> প্রিন্ট / PDF</button>
   </div>
 </div>
 
@@ -2275,7 +2754,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 <!-- ================= PIN LOCK ================= -->
 <div class="lock hide" id="lock">
   <div class="lock-inner">
-    <div class="lock-badge">🔒</div>
+    <div class="lock-badge"><svg class="ic ic-lg" aria-hidden="true"><use href="#i-lock"/></svg></div>
     <h2 id="lockTitle">PIN দিন</h2>
     <p id="lockMsg">৪ সংখ্যার PIN দিয়ে হিসাব খুলুন</p>
     <div class="dots" id="lockDots">
@@ -2963,6 +3442,16 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 
     /* ---- about ---- */
     dev_intro: ['আপনার দৈনন্দিন হিসাবকে সহজ ও সুন্দর করতে তৈরি।', 'Made to keep your daily accounts simple and beautiful.'],
+    developer: ['ডেভেলপার', 'Developer'],
+    dev_contact: ['ডেভেলপারের সাথে যোগাযোগ', 'Contact the developer'],
+    dev_bio: ['হিসাব অ্যাপটি তৈরি করেছি যাতে প্রতিদিনের আয়-খরচ, বাকি আর রিপোর্ট এক জায়গায় সহজে রাখা যায় — সম্পূর্ণ অফলাইনে, আপনার ডেটা আপনার কাছেই।',
+              'I built Hisab so your daily income, expenses, dues and reports all live in one place — fully offline, with your data staying yours.'],
+    made_with: ['তৈরি', 'Made with'],
+    balance: ['ব্যালেন্স', 'Balance'],
+    used_suffix: ['ব্যবহৃত', 'used'],
+    storage_plenty: ['যথেষ্ট জায়গা আছে', 'Plenty of space available'],
+    this_month_in: ['এ মাসে আয়', 'In this month'],
+    this_month_ex: ['এ মাসে খরচ', 'Out this month'],
     feedback: ['ফিডব্যাক / বাগ রিপোর্ট', 'Feedback / bug report'],
     feedback_msg: ['হ্যালো! হিসাব অ্যাপ v{v} নিয়ে আমার মতামত:\n\n(এখানে লিখুন)\n\n— ডিভাইস: {ua}',
                    'Hello! My feedback about Hisab app v{v}:\n\n(write here)\n\n— Device: {ua}'],
@@ -2974,7 +3463,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     privacy_note: ['আপনার ডেটা শুধু আপনার ফোনেই থাকে, কোথাও পাঠানো হয় না।',
                    'Your data stays only on your phone and is never sent anywhere.'],
     whats_new: ['নতুন কী আছে', 'What’s new'],
-    egg_found: ['🎉 আপনি গোপন ইস্টার এগ খুঁজে পেয়েছেন!', '🎉 You found the hidden easter egg!'],
+    egg_found: ['আপনি গোপন ইস্টার এগ খুঁজে পেয়েছেন!', 'You found the hidden easter egg!'],
 
     /* ---- onboarding ---- */
     onb_skip: ['এড়িয়ে যান', 'Skip'],
@@ -3013,7 +3502,140 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
    * Shown in Settings › About, in the changelog, in the feedback message and
    * in backup filenames. Bump it here only.
    */
-  var APP_VERSION = '2.0.0';
+  var APP_VERSION = '2.1.0';
+
+  /* ======================================================================
+     2.0  v2.1.0 · SVG ICON SYSTEM
+     ----------------------------------------------------------------------
+     One inline sprite (#iconSprite in the markup) holds every icon as a
+     <symbol>. icon() renders the <svg><use/></svg> pair; icTile() wraps it in
+     the rounded glass tile used across the app. No emoji is hard-coded in the
+     UI any more: category / wallet / method records store an icon KEY, and
+     emojiIcon() maps any legacy emoji to the closest key so old data and old
+     backup files keep working.
+     ====================================================================== */
+  var ICON_KEYS = ['food','bus','bulb','cart','briefcase','health','education','entertainment',
+    'house','shirt','gift','mobile','fuel','plane','coffee','paw','broom','tools','cap',
+    'money-bag','trend-up','trend-down','bank','card','wallet','cash','phone-pay','store','box',
+    'receipt','user','users','calendar','clock','repeat','mic','lock','key','shield','download',
+    'upload','share','send','telegram','whatsapp','sms','message','globe','palette','digits',
+    'confetti','star','tag','heart','target','chart','book','home','settings','bell','search',
+    'filter','pin','info','warning','trash','edit','check','close','chevron','plus','minus',
+    'swap','sparkle','rocket','currency','image','eye','link','copy','print','file','database',
+    'cloud-off','sun','moon','auto','gear','abacus','layers','refresh','phone','plane'];
+
+  function icon(name, cls) {
+    var n = name || 'tag';
+    return '<svg class="ic' + (cls ? ' ' + cls : '') + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>';
+  }
+  function iconFill(name, cls) {
+    var n = name || 'tag';
+    return '<svg class="ic' + (cls ? ' ' + cls : '') + '" data-fill="1" aria-hidden="true"><use href="#i-' + n + '"/></svg>';
+  }
+  /** a rounded glass tile tinted with the item's own colour */
+  function icTile(name, color, size) {
+    var c = color || '#8E8E93';
+    return '<span class="ic-tile' + (size ? ' ' + size : '') + '" style="--tile-bg:' + c + '2E;--tile-fg:' + c + '">' +
+      icon(name) + '</span>';
+  }
+  /** the settings-row icon tile */
+  function siIcon(name, color) {
+    var c = color || rowTint(name);
+    return '<span class="si-ic" style="--tile-bg:' + c + '2E;--tile-fg:' + c + '">' + icon(name) + '</span>';
+  }
+  /** per-icon tint used by the settings rows */
+  var ROW_TINT = {
+    palette:'#5E5CE6', globe:'#32ADE6', digits:'#00C7BE', confetti:'#FF2D55', store:'#FF9500',
+    repeat:'#AF52DE', send:'#32ADE6', download:'#34C759', upload:'#5E5CE6', clock:'#FF9500',
+    broom:'#8E8E93', warning:'#FF3B30', abacus:'#5E5CE6', shield:'#34C759', database:'#32ADE6',
+    'cloud-off':'#00C7BE', lock:'#FF9500', key:'#FFCC00', plus:'#34C759', tag:'#8E8E93',
+    wallet:'#5E5CE6', cash:'#34C759', 'phone-pay':'#E2136E', bank:'#32ADE6', card:'#AF52DE',
+    user:'#5E5CE6', users:'#32ADE6', bug:'#FF3B30', share:'#5E5CE6', telegram:'#32ADE6',
+    info:'#32ADE6', star:'#FFCC00', heart:'#FF2D55', rocket:'#AF52DE', sparkle:'#FFCC00',
+    receipt:'#00C7BE', box:'#FF9500', chart:'#5E5CE6', book:'#5E5CE6', home:'#5E5CE6',
+    settings:'#8E8E93', bell:'#FF9500', search:'#8E8E93', filter:'#8E8E93', pin:'#FF2D55',
+    trash:'#FF3B30', edit:'#32ADE6', check:'#34C759', close:'#FF3B30', chevron:'#8E8E93',
+    minus:'#FF3B30', swap:'#5E5CE6', currency:'#34C759', image:'#AF52DE', eye:'#8E8E93',
+    link:'#32ADE6', copy:'#8E8E93', print:'#5E5CE6', file:'#32ADE6', sun:'#FF9500',
+    moon:'#5E5CE6', auto:'#8E8E93', gear:'#8E8E93', layers:'#5E5CE6', refresh:'#00C7BE',
+    target:'#FF2D55', mic:'#5E5CE6', message:'#34C759', sms:'#34C759', whatsapp:'#25D366',
+    phone:'#34C759', calendar:'#FF2D55', food:'#FF9500', bus:'#32ADE6', bulb:'#FFCC00',
+    cart:'#34C759', briefcase:'#00C7BE', health:'#FF2D55', education:'#5E5CE6',
+    entertainment:'#AF52DE', house:'#FF9500', shirt:'#AF52DE', gift:'#FF2D55', mobile:'#32ADE6',
+    fuel:'#FF9500', plane:'#32ADE6', coffee:'#A2845E', paw:'#A2845E', tools:'#8E8E93',
+    cap:'#5E5CE6', 'money-bag':'#34C759', 'trend-up':'#34C759', 'trend-down':'#FF3B30',
+    play:'#34C759', pause:'#FF9500'
+  };
+  function rowTint(ic) { return ROW_TINT[ic] || '#8E8E93'; }
+
+  /** legacy emoji -> icon key (old data, old backup files) */
+  var EMOJI_TO_ICON = {
+    '\uD83C\uDF7D\uFE0F':'food','\uD83C\uDF54':'food','\uD83C\uDF55':'food','\uD83C\uDF5C':'food',
+    '\uD83C\uDF5A':'food','\uD83E\uDD58':'food','\u2615':'coffee','\uD83C\uDF75':'coffee',
+    '\uD83D\uDE8C':'bus','\uD83D\uDE97':'bus','\uD83D\uDE95':'bus','\uD83D\uDEFA':'bus',
+    '\uD83D\uDE86':'bus','\u2708\uFE0F':'plane','\uD83D\uDEB2':'bus',
+    '\uD83D\uDCA1':'bulb','\uD83D\uDD0C':'bulb','\u26A1':'bulb',
+    '\uD83D\uDED2':'cart','\uD83D\uDECD\uFE0F':'cart',
+    '\uD83D\uDCBC':'briefcase','\uD83C\uDFE2':'briefcase',
+    '\uD83C\uDFE5':'health','\uD83D\uDC8A':'health','\uD83E\uDE7A':'health','\uD83E\uDDB7':'health',
+    '\uD83D\uDCDA':'education','\uD83C\uDF93':'cap','\u270F\uFE0F':'education','\uD83D\uDCDD':'education',
+    '\uD83C\uDFAC':'entertainment','\uD83C\uDFAE':'entertainment','\uD83C\uDFB5':'entertainment',
+    '\uD83C\uDFA7':'entertainment',
+    '\uD83C\uDFE0':'house','\uD83C\uDFE1':'house','\uD83D\uDECB\uFE0F':'house',
+    '\uD83D\uDC55':'shirt','\uD83D\uDC57':'shirt','\uD83D\uDC5F':'shirt',
+    '\uD83C\uDF81':'gift','\uD83C\uDF89':'confetti','\uD83C\uDF8A':'confetti','\u2728':'sparkle',
+    '\uD83D\uDCF1':'mobile','\uD83D\uDCF2':'mobile','\uD83D\uDCDE':'phone','\u260E\uFE0F':'phone',
+    '\u26FD':'fuel','\uD83D\uDED2':'cart',
+    '\uD83E\uDDF9':'broom','\uD83E\uDDFA':'broom','\uD83E\uDDFC':'broom',
+    '\uD83D\uDD27':'tools','\uD83D\uDD28':'tools','\uD83D\uDEE0\uFE0F':'tools',
+    '\uD83D\uDC3E':'paw','\uD83D\uDC36':'paw','\uD83D\uDC31':'paw',
+    '\uD83D\uDCB0':'money-bag','\uD83D\uDCB5':'cash','\uD83D\uDCB4':'cash','\uD83D\uDCB6':'cash',
+    '\uD83D\uDCB7':'cash','\uD83E\uDE99':'cash','\uD83D\uDCB8':'money-bag',
+    '\uD83D\uDCC8':'trend-up','\uD83D\uDCC9':'trend-down','\uD83D\uDCCA':'chart',
+    '\uD83D\uDCCB':'receipt','\uD83E\uDDFE':'receipt',
+    '\uD83C\uDFE6':'bank','\uD83C\uDFE7':'bank','\uD83D\uDCB3':'card',
+    '\uD83D\uDC5B':'wallet','\uD83D\uDC5D':'wallet','\uD83D\uDC5C':'wallet',
+    '\uD83D\uDE80':'rocket','\uD83D\uDCE6':'box','\uD83C\uDFEA':'store','\uD83C\uDFEC':'store',
+    '\uD83C\uDFED':'store',
+    '\uD83D\uDC64':'user','\uD83D\uDC65':'users','\uD83E\uDD1D':'users','\uD83D\uDE4B':'user',
+    '\uD83D\uDCC5':'calendar','\u23F0':'clock','\u23F1\uFE0F':'clock','\uD83D\uDD50':'clock',
+    '\uD83D\uDD01':'repeat','\uD83D\uDD04':'repeat','\uD83D\uDD02':'repeat',
+    '\uD83C\uDF99\uFE0F':'mic','\uD83C\uDFA4':'mic',
+    '\uD83D\uDD12':'lock','\uD83D\uDD13':'lock','\uD83D\uDD10':'lock','\uD83D\uDD11':'key',
+    '\uD83D\uDDFD\uFE0F':'key',
+    '\uD83D\uDEE1\uFE0F':'shield','\u2705':'check','\u2714\uFE0F':'check','\u2713':'check',
+    '\u274C':'close','\u2716\uFE0F':'close',
+    '\u2B07\uFE0F':'download','\u2B06\uFE0F':'upload','\uD83D\uDCE4':'share','\uD83D\uDCE5':'download',
+    '\uD83D\uDCE8':'send','\u2709\uFE0F':'send','\uD83D\uDCE9':'send',
+    '\uD83D\uDCAC':'message','\uD83D\uDDE8\uFE0F':'message','\uD83D\uDCE2':'bell','\uD83D\uDD14':'bell',
+    '\uD83D\uDD15':'bell',
+    '\uD83C\uDF10':'globe','\uD83C\uDFA8':'palette','\uD83D\uDD22':'digits','\u2B50':'star',
+    '\uD83C\uDF1F':'star','\uD83C\uDFF7\uFE0F':'tag','\uD83C\uDFF7':'tag','\u2764\uFE0F':'heart',
+    '\u2665\uFE0F':'heart',
+    '\uD83C\uDFAF':'target','\uD83D\uDD0D':'search','\uD83D\uDD0E':'search','\uD83D\uDCCD':'pin',
+    '\u2139\uFE0F':'info','\u26A0\uFE0F':'warning','\uD83D\uDEA8':'warning',
+    '\uD83D\uDDD1\uFE0F':'trash','\uD83D\uDD8A\uFE0F':'edit','\uD83D\uDDA8\uFE0F':'print',
+    '\uD83D\uDCC4':'file','\uD83D\uDCC3':'file','\uD83D\uDCBE':'database',
+    '\u2601\uFE0F':'cloud-off','\u2600\uFE0F':'sun','\uD83C\uDF19':'moon','\u2699\uFE0F':'gear',
+    '\uD83E\uDDEE':'abacus','\uD83D\uDD17':'link','\uD83D\uDCCE':'link','\uD83D\uDCD1':'copy',
+    '\uD83D\uDDBC\uFE0F':'image','\uD83D\uDC41\uFE0F':'eye','\uD83C\uDF1E':'sparkle',
+    '\uD83D\uDFE2':'whatsapp','\uD83D\uDC1E':'bug','\uD83D\uDCF6':'wifi','\uD83D\uDCF4':'wifi',
+    '\uD83D\uDCE1':'wifi','\u2197':'arrow-up-right','\u2198':'arrow-down-left','\u2194':'swap',
+    '\u21C4':'swap','\u25B6':'play','\u23F8':'pause','\uD83D\uDCB1':'currency'
+  };
+  function emojiIcon(em) {
+    if (!em) return 'tag';
+    if (EMOJI_TO_ICON[em]) return EMOJI_TO_ICON[em];
+    var bare = String(em).replace(/\uFE0F/g, '');
+    return EMOJI_TO_ICON[bare] || 'tag';
+  }
+  /** the icon key for a category / wallet / method record (new or legacy) */
+  function recIcon(rec) {
+    if (!rec) return 'tag';
+    if (rec.icon) return rec.icon;
+    return emojiIcon(rec.emoji);
+  }
+
   var APP_NAME = 'হিসাব — Hisab';
   var DEV_NAME = 'R4Y CHOUDHURY';
   var DEV_TG = 'r4yh4nxyz';
@@ -3025,11 +3647,11 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
    * method→wallet migration is a straight id match and no history is lost.
    */
   var DEFAULT_WALLETS = [
-    { id: 'cash',   bn: 'ক্যাশ',  en: 'Cash',   emoji: '💵', color: '#34C759', opening: 0 },
-    { id: 'bkash',  bn: 'বিকাশ',  en: 'bKash',  emoji: '📱', color: '#E2136E', opening: 0 },
-    { id: 'nagad',  bn: 'নগদ',    en: 'Nagad',  emoji: '📲', color: '#EE7623', opening: 0 },
-    { id: 'rocket', bn: 'রকেট',   en: 'Rocket', emoji: '🚀', color: '#8C3494', opening: 0 },
-    { id: 'bank',   bn: 'ব্যাংক', en: 'Bank',   emoji: '🏦', color: '#32ADE6', opening: 0 }
+    { id: 'cash',   bn: 'ক্যাশ',  en: 'Cash',   icon: 'cash',      emoji: '💵', color: '#34C759', opening: 0 },
+    { id: 'bkash',  bn: 'বিকাশ',  en: 'bKash',  icon: 'phone-pay', emoji: '📱', color: '#E2136E', opening: 0 },
+    { id: 'nagad',  bn: 'নগদ',    en: 'Nagad',  icon: 'phone-pay', emoji: '📲', color: '#EE7623', opening: 0 },
+    { id: 'rocket', bn: 'রকেট',   en: 'Rocket', icon: 'rocket',    emoji: '🚀', color: '#8C3494', opening: 0 },
+    { id: 'bank',   bn: 'ব্যাংক', en: 'Bank',   icon: 'bank',      emoji: '🏦', color: '#32ADE6', opening: 0 }
   ];
 
   var WALLET_COLORS = ['#34C759', '#E2136E', '#EE7623', '#8C3494', '#32ADE6',
@@ -3051,31 +3673,38 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   var PALETTE = ['#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#30D158', '#00C7BE',
                  '#32ADE6', '#5E5CE6', '#AF52DE', '#FF2D55', '#8E8E93', '#A2845E'];
 
-  /* emoji choices offered in the category sheet */
-  var EMOJIS = ['🍽️', '🚌', '💡', '🛒', '💼', '🏥', '📚', '🎬', '🏠', '👕', '🎁', '📱',
-                '⛽', '✈️', '💊', '🧾', '💰', '📈', '🏦', '☕', '🐾', '🧹', '🔧', '🎓'];
+  /* icon choices offered in the category sheet (v2.1.0: SVG keys, not emoji) */
+  var ICON_CHOICES = ['food','bus','bulb','cart','briefcase','health','education','entertainment',
+    'house','shirt','gift','mobile','fuel','plane','coffee','paw','broom','tools','cap','money-bag',
+    'trend-up','bank','card','wallet','cash','phone-pay','store','box','receipt','user','users',
+    'calendar','clock','repeat','mic','lock','shield','star','tag','heart','target','chart','book',
+    'home','bell','search','pin','info','warning','sparkle','rocket','currency','image','globe',
+    'palette','digits','confetti','abacus','layers','gear','sun','moon','auto','link','copy','print',
+    'file','database','cloud-off','eye','filter','trash','edit','check','plus','minus','swap',
+    'arrow-up-right','arrow-down-left','play','pause','send','telegram','whatsapp','sms','message',
+    'phone','globe','star','tag'];
 
   /* built-in categories — id is stable so sample data can reference it */
   var DEFAULT_CATEGORIES = [
-    { id: 'food',      bn: 'খাবার',      en: 'Food',          emoji: '🍽️', color: '#FF9500', kind: 'expense' },
-    { id: 'transport', bn: 'যাতায়াত',    en: 'Transport',     emoji: '🚌', color: '#32ADE6', kind: 'expense' },
-    { id: 'bills',     bn: 'বিল',        en: 'Bills',         emoji: '💡', color: '#FFCC00', kind: 'expense' },
-    { id: 'grocery',   bn: 'বাজার',      en: 'Grocery',       emoji: '🛒', color: '#34C759', kind: 'expense' },
-    { id: 'salary',    bn: 'বেতন',       en: 'Salary',        emoji: '💰', color: '#30D158', kind: 'income'  },
-    { id: 'business',  bn: 'ব্যবসা',     en: 'Business',      emoji: '📈', color: '#00C7BE', kind: 'income'  },
-    { id: 'health',    bn: 'চিকিৎসা',    en: 'Health',        emoji: '🏥', color: '#FF2D55', kind: 'expense' },
-    { id: 'education', bn: 'শিক্ষা',     en: 'Education',     emoji: '📚', color: '#5E5CE6', kind: 'expense' },
-    { id: 'fun',       bn: 'বিনোদন',     en: 'Entertainment', emoji: '🎬', color: '#AF52DE', kind: 'expense' },
-    { id: 'other',     bn: 'অন্যান্য',   en: 'Other',         emoji: '📦', color: '#8E8E93', kind: 'both'    }
+    { id: 'food',      bn: 'খাবার',      en: 'Food',          icon: 'food',          emoji: '🍽️', color: '#FF9500', kind: 'expense' },
+    { id: 'transport', bn: 'যাতায়াত',    en: 'Transport',     icon: 'bus',           emoji: '🚌', color: '#32ADE6', kind: 'expense' },
+    { id: 'bills',     bn: 'বিল',        en: 'Bills',         icon: 'bulb',          emoji: '💡', color: '#FFCC00', kind: 'expense' },
+    { id: 'grocery',   bn: 'বাজার',      en: 'Grocery',       icon: 'cart',          emoji: '🛒', color: '#34C759', kind: 'expense' },
+    { id: 'salary',    bn: 'বেতন',       en: 'Salary',        icon: 'money-bag',     emoji: '💰', color: '#30D158', kind: 'income'  },
+    { id: 'business',  bn: 'ব্যবসা',     en: 'Business',      icon: 'trend-up',      emoji: '📈', color: '#00C7BE', kind: 'income'  },
+    { id: 'health',    bn: 'চিকিৎসা',    en: 'Health',        icon: 'health',        emoji: '🏥', color: '#FF2D55', kind: 'expense' },
+    { id: 'education', bn: 'শিক্ষা',     en: 'Education',     icon: 'education',     emoji: '📚', color: '#5E5CE6', kind: 'expense' },
+    { id: 'fun',       bn: 'বিনোদন',     en: 'Entertainment', icon: 'entertainment', emoji: '🎬', color: '#AF52DE', kind: 'expense' },
+    { id: 'other',     bn: 'অন্যান্য',   en: 'Other',         icon: 'box',           emoji: '📦', color: '#8E8E93', kind: 'both'    }
   ];
 
   /* payment methods */
   var METHODS = [
-    { id: 'cash',   bn: 'ক্যাশ',  en: 'Cash',   emoji: '💵' },
-    { id: 'bkash',  bn: 'বিকাশ',  en: 'bKash',  emoji: '📱' },
-    { id: 'nagad',  bn: 'নগদ',    en: 'Nagad',  emoji: '📲' },
-    { id: 'rocket', bn: 'রকেট',   en: 'Rocket', emoji: '🚀' },
-    { id: 'bank',   bn: 'ব্যাংক', en: 'Bank',   emoji: '🏦' }
+    { id: 'cash',   bn: 'ক্যাশ',  en: 'Cash',   icon: 'cash',      emoji: '💵' },
+    { id: 'bkash',  bn: 'বিকাশ',  en: 'bKash',  icon: 'phone-pay', emoji: '📱' },
+    { id: 'nagad',  bn: 'নগদ',    en: 'Nagad',  icon: 'phone-pay', emoji: '📲' },
+    { id: 'rocket', bn: 'রকেট',   en: 'Rocket', icon: 'rocket',    emoji: '🚀' },
+    { id: 'bank',   bn: 'ব্যাংক', en: 'Bank',   icon: 'bank',      emoji: '🏦' }
   ];
 
   /*
@@ -3544,7 +4173,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     for (var j = 0; j < S.categories.length; j++) {
       if (S.categories[j].id === 'other') return S.categories[j];
     }
-    return { id: 'other', bn: 'অন্যান্য', en: 'Other', emoji: '📦', color: '#8E8E93', kind: 'both' };
+    return { id: 'other', bn: 'অন্যান্য', en: 'Other', icon: 'box', emoji: '📦', color: '#8E8E93', kind: 'both' };
   }
   function catName(c) { return (S.settings.lang === 'en' && c.en) ? c.en : (c.bn || c.en); }
   function methodById(id) {
@@ -3858,18 +4487,29 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
    * Bengali first, English second, newest release on top.
    */
   var CHANGELOG = [
+    { v: '2.1.0', d: '৯ অক্টোবর ২০২৬', items: [
+      'নতুন “ডেভেলপার” সেকশন — ডেভেলপার কার্ড, টেলিগ্রাম যোগাযোগ, ফিডব্যাক ও শেয়ার',
+      'সব ইমোজির বদলে প্রিমিয়াম SVG আইকন — ট্যাব, ক্যাটাগরি, ওয়ালেট, খালি অবস্থা, টোস্ট সব জায়গায়',
+      'ক্যাটাগরি তৈরির সময় এখন ৮০+ SVG আইকনের গ্রিড ও রঙ বাছাই',
+      'নতুন ওয়ালেট কার্ড — বড় ব্যালেন্স, আলাদা লাইনে নাম ও টাকা, প্রতিটি ওয়ালেটের নিজস্ব গ্রেডিয়েন্ট',
+      '“মোট ব্যালেন্স” হিরো কার্ড — কোন ওয়ালেটে কত অংশ, রঙিন সেগমেন্ট বার ও কাউন্ট-আপ',
+      'ওয়ালেট কার্ডে ট্যাপ করলে বিস্তারিত পর্দা — এ মাসের আয়/খরচ ও লেনদেনের তালিকা',
+      'লেআউট ঠিক — সেটিংসের সারিতে শিরোনাম ও সাবটাইটেল আলাদা লাইনে, হেডারে শিরোনাম আর দ্বিগুণ হয় না',
+      'স্টোরেজ সারিতে ব্যবহৃত জায়গার প্রগ্রেস বার',
+      'বাংলা সংখ্যা এখন আরও স্পষ্ট — বড় অঙ্কে ৪ আর ৮ গুলিয়ে যায় না'
+    ] },
     { v: '2.0.0', d: '৯ অক্টোবর ২০২৬', items: [
       'ডেটা এখন IndexedDB-তে — পুরনো সব হিসাব স্বয়ংক্রিয়ভাবে সরানো হয়, কিছুই হারায় না',
       '“সুরক্ষিত স্টোরেজ” চালু — ব্রাউজার আর নিজে থেকে ডেটা মুছবে না',
       'ব্যাকআপ রিমাইন্ডার — ৩ / ৭ / ১৫ / ৩০ দিন পরপর মনে করিয়ে দেবে',
       'ব্যাকআপ ফাইলে তারিখ ও ভার্সন থাকে; ফিরিয়ে আনার সময় রিপ্লেস বা মার্জ করা যায়',
-      '🎙️ ভয়েস ইনপুট — “বাজার ৫০০ টাকা” বললেই হিসাব লেখা হয়ে যায়',
-      '🔁 রিকারিং এন্ট্রি — বাসা ভাড়া, ইন্টারনেট বিল, বেতন স্বয়ংক্রিয়ভাবে যোগ হয়',
-      '👛 একাধিক ওয়ালেট — ক্যাশ, বিকাশ, নগদ, রকেট, ব্যাংক ও নিজের বানানো ওয়ালেট',
+      'ভয়েস ইনপুট — “বাজার ৫০০ টাকা” বললেই হিসাব লেখা হয়ে যায়',
+      'রিকারিং এন্ট্রি — বাসা ভাড়া, ইন্টারনেট বিল, বেতন স্বয়ংক্রিয়ভাবে যোগ হয়',
+      'একাধিক ওয়ালেট — ক্যাশ, বিকাশ, নগদ, রকেট, ব্যাংক ও নিজের বানানো ওয়ালেট',
       'ওয়ালেট ট্রান্সফার — আয়/খরচের হিসাব না বদলেই টাকা সরানো যায়',
-      '🔔 বাকির রিমাইন্ডার — WhatsApp, SMS বা টেলিগ্রামে ভদ্র বার্তা পাঠান',
+      'বাকির রিমাইন্ডার — WhatsApp, SMS বা টেলিগ্রামে ভদ্র বার্তা পাঠান',
       'বাকির মেয়াদ তারিখ ও “মেয়াদ পার” সতর্কতা',
-      '🏪 দোকান মোড — স্টক, বিক্রি, ইনভয়েস, লাভ ও দোকানের রিপোর্ট',
+      'দোকান মোড — স্টক, বিক্রি, ইনভয়েস, লাভ ও দোকানের রিপোর্ট',
       'লম্বা লেনদেনের তালিকা এখন ৩০টি করে লোড হয় — পুরনো ফোনেও দ্রুত',
       'স্ট্যান্ডঅ্যালোন মোডে উপরের ফাঁকা জায়গার সমস্যা ঠিক করা হয়েছে',
       'নতুন স্প্ল্যাশ স্ক্রিন ও ৩ ধাপের পরিচিতি',
@@ -4541,7 +5181,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     var sub = catName(cat) + ' <span class="sep">·</span> ' + methodName(m) +
               (note ? ' <span class="sep">·</span> ' + esc(note) : '');
     /* v4 · recurring marker so auto-created rows are recognisable */
-    if (tx.recurring) sub = '<span class="badge rec">🔁</span> ' + sub;
+    if (tx.recurring) sub = '<span class="badge rec">' + icon('repeat') + '</span> ' + sub;
     var sign = isIn ? '+' : '−';
     var row = '<button class="tx-row" type="button" data-act="tx-open" data-id="' + tx.id + '" ' +
       'aria-label="' + esc(catName(cat)) + ' ' + esc(money(tx.amount)) + '">' +
@@ -4785,8 +5425,10 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 
     /* ---------- v4 · wallet balances carousel ---------- */
     html += '<div class="sec-head"><span class="sec-title">' + esc(t('wallet_balances')) + '</span>' +
-      '<button class="sec-link" type="button" data-act="open-transfer">⇄ ' + esc(t('wallet_transfer')) + '</button></div>';
+      '<button class="wpill" type="button" data-act="open-transfer">' + icon('swap') + ' ' + esc(t('wallet_transfer')) + '</button></div>';
     html += walletsHTML();
+    /* the carousel + hero are painted now — wire the dots and the count-up */
+    setTimeout(function () { bindWalletDots(); countUpWalletHero(); }, 0);
 
     /* ---------- v4 · backup reminder (configurable, hides when fresh) ---------- */
     html += backupBannerHTML();
@@ -4837,7 +5479,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       '<span class="sec-link" style="pointer-events:none;opacity:.7">' + esc(monthName) + ' ' + num(new Date().getFullYear()) + '</span></div>';
     html += '<div class="card chart-card">';
     if (!byCat.length) {
-      html += emptyHTML('🧾', t('no_expense_month'), t('add_first_tx'));
+      html += emptyHTML('receipt', t('no_expense_month'), t('add_first_tx'));
     } else {
       html += '<div class="donut-wrap"><canvas id="donutCv" role="img" aria-label="' + esc(t('expense_by_cat')) + '"></canvas>' +
         '<div class="donut-center"><div class="dc-lab">' + esc(t('this_month')) + '</div>' +
@@ -4869,7 +5511,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     html += '<div class="sec-head"><span class="sec-title">' + esc(t('recent')) + '</span>' +
       '<button class="sec-link" type="button" data-act="go-tx">' + esc(t('see_all')) + '</button></div>';
     if (!recent.length) {
-      html += '<div class="card">' + emptyHTML('📭', t('no_tx'), t('no_tx_sub')) + '</div>';
+      html += '<div class="card">' + emptyHTML('receipt', t('no_tx'), t('no_tx_sub')) + '</div>';
     } else {
       html += '<div class="card list-card"><div class="list stagger">' +
         recent.map(function (tx) { return txRowHTML(tx, false); }).join('') +
@@ -4972,9 +5614,9 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 
     /* rows */
     if (!S.txs.length) {
-      html += '<div class="card mt16">' + emptyHTML('🧾', t('no_tx'), t('no_tx_sub')) + '</div>';
+      html += '<div class="card mt16">' + emptyHTML('receipt', t('no_tx'), t('no_tx_sub')) + '</div>';
     } else if (!list.length) {
-      html += '<div class="card mt16">' + emptyHTML('🔍', t('no_match'), t('no_match_sub')) + '</div>';
+      html += '<div class="card mt16">' + emptyHTML('search', t('no_match'), t('no_match_sub')) + '</div>';
     } else {
       html += '<p style="font-size:11.5px;color:var(--text-3);text-align:center;margin:16px 0 4px;">' + esc(t('swipe_hint')) + '</p>';
       /* v4 · render only the first 30 rows, then load more as you scroll.
@@ -5402,7 +6044,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       '<button class="sec-link" type="button" data-act="new-person">+ ' + esc(t('add')) + '</button></div>';
 
     if (!S.people.length) {
-      html += '<div class="card">' + emptyHTML('🤝', t('no_people'), t('no_people_sub')) + '</div>';
+      html += '<div class="card">' + emptyHTML('users', t('no_people'), t('no_people_sub')) + '</div>';
     } else {
       html += '<div class="list">' + S.people.map(function (p) {
         var bal = personBalance(p.id);
@@ -5474,19 +6116,19 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     html += '<div class="chips" style="margin-bottom:6px;">';
     var dueState = overdueState(p.id);
     if (bal > 0) {
-      html += '<button class="chip" type="button" data-act="remind" data-id="' + p.id + '">🔔 ' + esc(t('reminder')) + '</button>';
+      html += '<button class="chip" type="button" data-act="remind" data-id="' + p.id + '">' + icon('bell') + ' ' + esc(t('reminder')) + '</button>';
     }
     if (p.phone) {
-      html += '<a class="chip" href="' + esc(sm) + '">💬 ' + esc(t('send_sms')) + '</a>';
-      html += '<a class="chip" href="' + esc(wa) + '" target="_blank" rel="noopener noreferrer">🟢 ' + esc(t('send_whatsapp')) + '</a>';
-      html += '<a class="chip" href="tel:' + esc(String(p.phone).replace(/\s/g, '')) + '">📞 ' + esc(t('call')) + '</a>';
+      html += '<a class="chip" href="' + esc(sm) + '">' + icon('message') + ' ' + esc(t('send_sms')) + '</a>';
+      html += '<a class="chip" href="' + esc(wa) + '" target="_blank" rel="noopener noreferrer">' + iconFill('whatsapp') + ' ' + esc(t('send_whatsapp')) + '</a>';
+      html += '<a class="chip" href="tel:' + esc(String(p.phone).replace(/\s/g, '')) + '">' + icon('phone') + ' ' + esc(t('call')) + '</a>';
     } else {
       html += '<span class="chip" style="opacity:.6">' + esc(t('no_phone')) + '</span>';
     }
-    html += '<button class="chip" type="button" data-act="copy-reminder" data-id="' + p.id + '">📋 ' + esc(t('reminder')) + '</button>';
+    html += '<button class="chip" type="button" data-act="copy-reminder" data-id="' + p.id + '">' + icon('copy') + ' ' + esc(t('reminder')) + '</button>';
     if (dueState) {
       html += '<span class="chip" style="border-color:var(--expense);color:var(--expense)">' +
-        (dueState === 'overdue' ? '⚠️ ' + esc(t('overdue')) : '⏰ ' + esc(t('due_soon'))) + '</span>';
+        (dueState === 'overdue' ? icon('warning') + ' ' + esc(t('overdue')) : icon('clock') + ' ' + esc(t('due_soon'))) + '</span>';
     }
     html += '</div>';
 
@@ -5630,7 +6272,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     html += '<div class="sec-head"><span class="sec-title">' + esc(t('summary')) + '</span></div>';
     var nonEmpty = buckets.filter(function (b) { return b.txs.length; });
     if (!nonEmpty.length) {
-      html += '<div class="card">' + emptyHTML('📊', t('no_data'), '') + '</div>';
+      html += '<div class="card">' + emptyHTML('chart', t('no_data'), '') + '</div>';
     } else {
       html += '<div class="list">' + nonEmpty.map(function (b) {
         var bs = sumOf(b.txs);
@@ -5645,7 +6287,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     /* category breakdown bars */
     html += '<div class="sec-head"><span class="sec-title">' + esc(t('breakdown')) + '</span></div>';
     if (!byCat.length) {
-      html += '<div class="card">' + emptyHTML('🧾', t('no_data'), '') + '</div>';
+      html += '<div class="card">' + emptyHTML('receipt', t('no_data'), '') + '</div>';
     } else {
       var maxVal = byCat[0].value || 1;
       html += '<div class="card">' + byCat.map(function (c) {
@@ -5663,13 +6305,13 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 
     /* export row */
     html += '<div class="row mt16 no-print" style="gap:10px;">' +
-      '<button class="btn btn-ghost grow" type="button" data-act="export-csv">📄 ' + esc(t('export_csv')) + '</button>' +
-      '<button class="btn btn-primary grow" type="button" data-act="print-report">🖨️ ' + esc(t('print_pdf')) + '</button>' +
+      '<button class="btn btn-ghost grow" type="button" data-act="export-csv">' + icon('file') + ' ' + esc(t('export_csv')) + '</button>' +
+      '<button class="btn btn-primary grow" type="button" data-act="print-report">' + icon('print') + ' ' + esc(t('print_pdf')) + '</button>' +
     '</div>';
     /* v4 · share the report as a clean PDF (print) or as a text summary */
     html += '<div class="row mt12 no-print" style="gap:10px;">' +
-      '<button class="btn btn-ghost grow" type="button" data-act="share-report">📤 ' + esc(t('share_report')) + '</button>' +
-      '<button class="btn btn-ghost grow" type="button" data-act="pdf-report">🖨️ ' + esc(t('pdf_report')) + '</button>' +
+      '<button class="btn btn-ghost grow" type="button" data-act="share-report">' + icon('share') + ' ' + esc(t('share_report')) + '</button>' +
+      '<button class="btn btn-ghost grow" type="button" data-act="pdf-report">' + icon('print') + ' ' + esc(t('pdf_report')) + '</button>' +
     '</div>';
     html += '<p style="font-size:11.5px;color:var(--text-3);text-align:center;margin:10px 0 0;" class="no-print">' + esc(t('print_hint')) + '</p>';
 
@@ -5696,7 +6338,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 
     html += '<div class="card">';
     if (!budgeted.length) {
-      html += emptyHTML('🎯', t('budget_none'), t('budget_none_sub'));
+      html += emptyHTML('target', t('budget_none'), t('budget_none_sub'));
     } else {
       html += '<div class="budget-ring"><canvas id="budgetRing" role="img" aria-label="' + esc(t('budget')) + '"></canvas>' +
         '<div class="br-center"><div><div class="br-pct" style="color:' + color + '">' + pct(ratio * 100) + '</div>' +
@@ -5784,7 +6426,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     html += '<div class="card set-group">';
 
     html += '<div class="set-item">' +
-      '<span class="si-ic">🎨</span>' +
+      siIcon('palette') +
       '<span class="si-t"><span class="si-l">' + esc(t('theme')) + '</span></span>' +
     '</div>';
     html += '<div style="padding:0 14px 14px;"><div class="seg" id="themeSeg">' +
@@ -5795,7 +6437,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     '</div></div>';
 
     html += '<div class="set-item">' +
-      '<span class="si-ic">🌐</span>' +
+      siIcon('globe') +
       '<span class="si-t"><span class="si-l">' + esc(t('language')) + '</span></span>' +
     '</div>';
     html += '<div style="padding:0 14px 14px;"><div class="seg" id="langSeg">' +
@@ -5804,14 +6446,14 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       '<button type="button" data-lang="en"' + (st.lang === 'en' ? ' class="on"' : '') + '>' + esc(t('lang_en')) + '</button>' +
     '</div></div>';
 
-    html += switchRow('toggle-digits', '🔢', t('bn_digits'), t('bn_digits_sub'), st.banglaDigits);
+    html += switchRow('toggle-digits', 'digits', t('bn_digits'), t('bn_digits_sub'), st.banglaDigits);
 
-    html += switchRow('toggle-celebrate', '🎉', t('celebrate'), t('celebrate_sub'), st.celebrate !== false);
+    html += switchRow('toggle-celebrate', 'confetti', t('celebrate'), t('celebrate_sub'), st.celebrate !== false);
 
     /* ---------- v4 · দোকান মোড, recurring, message template ---------- */
-    html += switchRow('shop-toggle', '🏪', t('shop_mode'), t('shop_mode_sub'), !!st.shopMode);
-    html += choiceRow('open-recurring', '🔁', t('recur_title'), t('recur_sub'), num(String(S.recurring.length)));
-    html += choiceRow('msg-edit', '✉️', t('msg_template'), t('msg_template_sub'), UI.msgEdit ? t('close') : '›');
+    html += switchRow('shop-toggle', 'store', t('shop_mode'), t('shop_mode_sub'), !!st.shopMode);
+    html += choiceRow('open-recurring', 'repeat', t('recur_title'), t('recur_sub'), num(String(S.recurring.length)));
+    html += choiceRow('msg-edit', 'send', t('msg_template'), t('msg_template_sub'), UI.msgEdit ? t('close') : '›');
     if (UI.msgEdit) {
       html += '<div style="padding:0 4px 14px;">' +
         '<textarea class="input" id="msgArea" rows="3" style="min-height:88px;line-height:1.6;padding:12px;">' +
@@ -5824,14 +6466,14 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     /* PWA install row — only meaningful when the app is not already installed */
     if (!PWA.installed && !isStandalone()) {
       html += '<button class="set-item" type="button" data-act="pwa-install" style="width:100%;text-align:left">' +
-        '<span class="si-ic" style="background:linear-gradient(135deg,#7B79F5,#5E5CE6 45%,#2DD4BF);color:#fff">⬇️</span>' +
+        siIcon('download', '#5E5CE6') +
         '<span class="si-t"><span class="si-l">' + esc(t('install_title')) + '</span>' +
         '<span class="si-s">' + esc(isIOS() ? t('ios_sub') : t('install_sub')) + '</span></span>' +
         '<span class="set-val">›</span></button>';
     }
 
     html += '<div class="set-item">' +
-      '<span class="si-ic">💱</span>' +
+      siIcon('currency') +
       '<span class="si-t"><span class="si-l">' + esc(t('currency')) + '</span>' +
       '<span class="si-s">' + esc(t('currency_sub')) + '</span></span>' +
       '<input class="input" id="currencyInput" type="text" maxlength="3" value="' + esc(st.currency) + '" ' +
@@ -5843,9 +6485,9 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     /* ---------- security ---------- */
     html += '<div class="sec-head"><span class="sec-title">' + esc(t('security')) + '</span></div>';
     html += '<div class="card set-group">';
-    html += switchRow('toggle-pin', '🔒', t('pin_on'), t('pin_on_sub'), st.pinOn);
+    html += switchRow('toggle-pin', 'lock', t('pin_on'), t('pin_on_sub'), st.pinOn);
     html += '<button class="set-item" type="button" data-act="change-pin" style="width:100%;text-align:left">' +
-      '<span class="si-ic">🔑</span>' +
+      siIcon('key') +
       '<span class="si-t"><span class="si-l">' + esc(t('pin_set')) + '</span></span>' +
       '<span class="set-val">›</span></button>';
     html += '</div>';
@@ -5864,17 +6506,19 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
           (c.custom
             ? '<button class="icon-btn" style="width:36px;height:36px;border-radius:12px" type="button" data-act="del-cat" data-id="' + c.id + '" aria-label="' + esc(t('delete')) + '">' +
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:17px;height:17px"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13"/></svg></button>'
-            : '<span class="set-val">🔒</span>') +
+            : '<span class="set-val">' + icon('lock') + '</span>') +
         '</div>';
       }).join('');
       html += '<button class="set-item" type="button" data-act="new-cat" style="width:100%;text-align:left">' +
-        '<span class="si-ic">➕</span>' +
+        siIcon('plus') +
         '<span class="si-t"><span class="si-l">' + esc(t('new_cat')) + '</span></span>' +
         '<span class="set-val">›</span></button>';
     } else {
-      html += '<div class="set-item"><span class="si-ic">🗂️</span>' +
+      html += '<div class="set-item" style="align-items:flex-start">' + siIcon('layers') +
         '<span class="si-t"><span class="si-l">' + num(S.categories.length) + ' ' + esc(t('cats_title')) + '</span>' +
-        '<span class="si-s">' + esc(S.categories.slice(0, 6).map(function (c) { return c.emoji; }).join(' ')) + '</span></span>' +
+        '<span class="cat-strip">' + S.categories.slice(0, 8).map(function (c) {
+          return icTile(recIcon(c), c.color);
+        }).join('') + '</span></span>' +
         '<button class="btn btn-ghost btn-sm" type="button" data-act="toggle-cat-manage">' + esc(t('manage_cats')) + '</button></div>';
     }
     html += '</div>';
@@ -5883,45 +6527,63 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     html += '<div class="sec-head"><span class="sec-title">' + esc(t('data')) + '</span></div>';
     html += '<div class="card set-group">';
     html += '<button class="set-item" type="button" data-act="backup" style="width:100%;text-align:left">' +
-      '<span class="si-ic">⬇️</span><span class="si-t"><span class="si-l">' + esc(t('backup')) + '</span>' +
+      siIcon('download') + '<span class="si-t"><span class="si-l">' + esc(t('backup')) + '</span>' +
       '<span class="si-s">' + esc(t('backup_sub')) + '</span></span><span class="set-val">›</span></button>';
     html += '<button class="set-item" type="button" data-act="restore" style="width:100%;text-align:left">' +
-      '<span class="si-ic">⬆️</span><span class="si-t"><span class="si-l">' + esc(t('restore')) + '</span>' +
+      siIcon('upload') + '<span class="si-t"><span class="si-l">' + esc(t('restore')) + '</span>' +
       '<span class="si-s">' + esc(t('restore_sub')) + '</span></span><span class="set-val">›</span></button>';
     /* v4 · how often to be reminded, and the last backup date */
-    html += choiceRow('backup-days', '⏰', t('backup_remind'),
+    html += choiceRow('backup-days', 'clock', t('backup_remind'),
       (daysSinceBackup() === null ? t('backup_never') : t('backup_ago', { n: String(num(daysSinceBackup())) })),
       (st.backupRemindDays ? num(String(st.backupRemindDays)) : t('off')));
     html += '<button class="set-item" type="button" data-act="clear-sample" style="width:100%;text-align:left">' +
-      '<span class="si-ic">🧹</span><span class="si-t"><span class="si-l">' + esc(t('clear_sample')) + '</span>' +
+      siIcon('broom') + '<span class="si-t"><span class="si-l">' + esc(t('clear_sample')) + '</span>' +
       '<span class="si-s">' + esc(t('clear_sample_sub')) + '</span></span><span class="set-val">›</span></button>';
     html += '<button class="set-item" type="button" data-act="reset" style="width:100%;text-align:left">' +
-      '<span class="si-ic" style="background:rgba(255,59,48,.13);color:var(--expense)">⚠️</span>' +
+      siIcon('warning', '#FF3B30') +
       '<span class="si-t"><span class="si-l" style="color:var(--expense)">' + esc(t('reset')) + '</span>' +
       '<span class="si-s">' + esc(t('reset_sub')) + '</span></span><span class="set-val">›</span></button>';
+    html += '</div>';
+
+    /* ---------- developer (v2.1.0) ---------- */
+    html += '<div class="sec-head"><span class="sec-title">' + esc(t('developer')) + '</span></div>';
+    html += '<button class="dev-card" type="button" data-act="open-dev" style="width:100%">' +
+      '<span class="dev-av">R4</span>' +
+      '<span class="dc-t"><span class="dc-n">' + esc(DEV_NAME) + '</span>' +
+      '<span class="dc-s">' + esc(t('dev_intro')) + '</span></span>' +
+      '<span class="dc-x">' + icon('chevron') + '</span></button>';
+    html += '<div class="card set-group" style="margin-top:10px">';
+    html += '<a class="set-item" href="' + DEV_TG_URL + '" target="_blank" rel="noopener noreferrer" style="width:100%;text-align:left">' +
+      siIcon('telegram', '#32ADE6') +
+      '<span class="si-t"><span class="si-l">' + esc(t('dev_contact')) + '</span>' +
+      '<span class="si-s">@' + esc(DEV_TG) + '</span></span>' +
+      '<span class="set-val">' + icon('arrow-up-right') + '</span></a>';
     html += '</div>';
 
     /* ---------- about (v4) ---------- */
     html += '<div class="sec-head"><span class="sec-title">' + esc(t('about')) + '</span></div>';
     html += '<div class="card set-group">';
     html += '<button class="set-item" type="button" data-act="open-about" style="width:100%;text-align:left">' +
-      '<span class="si-ic">🧮</span>' +
+      siIcon('abacus') +
       '<span class="si-t"><span class="si-l">' + esc(t('about_sub')) + '</span>' +
       '<span class="si-s">' + esc(APP_NAME) + ' · ' + esc(t('version')) + ' ' + esc(APP_VERSION) + '</span></span>' +
       '<span class="set-val">›</span></button>';
     /* protected-storage state + the real usage figure from the Storage API */
-    html += '<div class="set-item"><span class="si-ic">🛡️</span>' +
+    html += '<div class="set-item">' + siIcon('shield') +
       '<span class="si-t"><span class="si-l">' + esc(t('protected_storage')) + '</span>' +
       '<span class="si-s">' + esc('IndexedDB · ' + (st.storagePersisted ? t('on') : t('off'))) + '</span></span>' +
-      '<span class="set-val">' + (st.storagePersisted ? '✓' : '—') + '</span></div>';
-    html += '<div class="set-item"><span class="si-ic">💾</span>' +
+      '<span class="set-val">' + (st.storagePersisted ? icon('check') : '—') + '</span></div>';
+    var _pct = (st.storageQuota && st.storageUsage) ? Math.min(100, (st.storageUsage / st.storageQuota) * 100) : 0;
+    html += '<div class="set-item" style="align-items:flex-start">' + siIcon('database') +
       '<span class="si-t"><span class="si-l">' + esc(t('storage_used')) + '</span>' +
-      '<span class="si-s">' + esc(fmtBytes(st.storageUsage)) + (st.storageQuota ? ' / ' + esc(fmtBytes(st.storageQuota)) : '') +
-      ' · ' + num(String(S.txs.length)) + ' ' + esc(t('transactions_count')) + '</span></span></div>';
-    html += '<div class="set-item"><span class="si-ic">📴</span>' +
+      '<span class="si-s">' + esc(fmtBytes(st.storageUsage)) + ' ' + esc(t('used_suffix')) +
+      ' · ' + num(String(S.txs.length)) + ' ' + esc(t('transactions_count')) + '</span>' +
+      '<span class="stor-bar"><i style="width:' + _pct.toFixed(1) + '%"></i></span>' +
+      '<span class="stor-note">' + esc(t('storage_plenty')) + '</span></span></div>';
+    html += '<div class="set-item">' + siIcon('cloud-off') +
       '<span class="si-t"><span class="si-l">' + esc(t('offline_ready')) + '</span>' +
       '<span class="si-s">' + esc(t('pwa_ready')) + '</span></span>' +
-      '<span class="set-val">✓</span></div>';
+      '<span class="set-val">' + icon('check') + '</span></div>';
     html += '</div>';
 
     host.innerHTML = html;
@@ -5976,7 +6638,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   function byId(id) { return S.txs.filter(function (x) { return x.id === id; })[0] || null; }
 
   function openCatSheet() {
-    UI.catDraft = { emoji: '🏷️', color: PALETTE[7], kind: 'expense', bn: '', en: '' };
+    UI.catDraft = { icon: 'tag', emoji: '', color: PALETTE[7], kind: 'expense', bn: '', en: '' };
     paintCatSheet();
     openSheet('sheetCat');
   }
@@ -5986,8 +6648,10 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     if (!d) return;
     var eg = $('#catEmojiGrid');
     if (eg) {
-      eg.innerHTML = EMOJIS.map(function (e) {
-        return '<button class="emoji-btn' + (e === d.emoji ? ' on' : '') + '" type="button" data-act="pick-emoji" data-v="' + e + '">' + e + '</button>';
+      eg.className = 'ic-grid';
+      eg.innerHTML = ICON_CHOICES.map(function (k) {
+        return '<button class="ic-pick' + (recIcon(d) === k ? ' on' : '') + '" type="button" data-act="pick-icon" data-v="' + k + '" ' +
+          'style="--tile-bg:' + (d.color || '#5E5CE6') + '2E;--tile-fg:' + (d.color || '#5E5CE6') + '">' + icon(k) + '</button>';
       }).join('');
     }
     var sw = $('#catSwatches');
@@ -6013,7 +6677,8 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       id: uid('c'),
       bn: bn || en,
       en: en || bn,
-      emoji: d.emoji,
+      icon: d.icon || 'tag',
+      emoji: '',
       color: d.color,
       kind: kind,
       custom: true
@@ -6285,10 +6950,12 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     }
 
     /* --- v4 · wallets + transfers --- */
-    else if (act === 'open-wallet') { openWalletSheet(el.getAttribute('data-id')); }
+    else if (act === 'open-wallet') { openWalletDetail(el.getAttribute('data-id')); }
+    else if (act === 'wallet-edit') { closeSheet('sheetWalletDetail'); openWalletSheet(el.getAttribute('data-id')); }
     else if (act === 'new-wallet') { openWalletSheet(null); }
-    else if (act === 'pick-wallet-emoji') { _walletDraft.emoji = el.getAttribute('data-v'); paintWalletSheet(); }
+    else if (act === 'pick-wallet-icon') { _walletDraft.icon = el.getAttribute('data-v'); paintWalletSheet(); }
     else if (act === 'pick-wallet-color') { _walletDraft.color = el.getAttribute('data-v'); paintWalletSheet(); }
+    else if (act === 'open-dev') { openDev(); }
     else if (act === 'open-transfer') { openTransferSheet(); }
     else if (act === 'tr-from') {
       /* the target must differ from the source — nudge it if they collide */
@@ -6356,7 +7023,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       var on = !S.settings.shopMode;
       applyShopMode(on);
       haptic('success');
-      toast(t('shop_mode') + (on ? ' ✓' : ''));
+      toast(t('shop_mode') + (on ? ' ' + icon('check') : ''));
       renderCurrent(true);
       if (on) go('shop');
     }
@@ -6453,7 +7120,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     } else if (act === 'tx-cat') { UI.txFilter.cat = el.getAttribute('data-v'); renderTx(); }
 
     /* --- category sheet --- */
-    else if (act === 'pick-emoji') { UI.catDraft.emoji = el.getAttribute('data-v'); paintCatSheet(); }
+    else if (act === 'pick-icon') { UI.catDraft.icon = el.getAttribute('data-v'); paintCatSheet(); }
     else if (act === 'pick-color') { UI.catDraft.color = el.getAttribute('data-v'); paintCatSheet(); }
     else if (act === 'new-cat') { openCatSheet(); }
     else if (act === 'del-cat') {
@@ -6753,7 +7420,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
      ====================================================================== */
   function walletById(id) {
     for (var i = 0; i < S.wallets.length; i++) if (S.wallets[i].id === id) return S.wallets[i];
-    return S.wallets[0] || { id: 'cash', bn: 'ক্যাশ', en: 'Cash', emoji: '💵', color: '#34C759' };
+    return S.wallets[0] || { id: 'cash', bn: 'ক্যাশ', en: 'Cash', icon: 'cash', emoji: '', color: '#34C759' };
   }
   function walletName(w) { return (S.settings.lang === 'en' && w.en) ? w.en : (w.bn || w.en || ''); }
 
@@ -6778,27 +7445,167 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     return bal;
   }
 
+  /* per-wallet gradient glass (v2.1.0) */
+  var WALLET_GRAD = {
+    cash:   'linear-gradient(135deg,rgba(52,199,89,.30),rgba(48,209,88,.16))',
+    bkash:  'linear-gradient(135deg,rgba(226,19,110,.30),rgba(255,45,85,.16))',
+    nagad:  'linear-gradient(135deg,rgba(238,118,35,.30),rgba(255,149,0,.16))',
+    rocket: 'linear-gradient(135deg,rgba(140,52,148,.30),rgba(175,82,222,.16))',
+    bank:   'linear-gradient(135deg,rgba(50,173,230,.30),rgba(0,199,190,.16))'
+  };
+  function walletGrad(w) {
+    if (WALLET_GRAD[w.id]) return WALLET_GRAD[w.id];
+    var c = w.color || '#5E5CE6';
+    return 'linear-gradient(135deg,' + c + '4D,' + c + '26)';
+  }
+
+  /** the মোট ব্যালেন্স hero with the segmented share bar */
+  function walletHeroHTML() {
+    var total = 0, parts = [];
+    S.wallets.forEach(function (w) {
+      var b = walletBalance(w.id);
+      total += b;
+      parts.push({ w: w, b: b });
+    });
+    var absSum = parts.reduce(function (a, p) { return a + Math.abs(p.b); }, 0) || 1;
+    var segs = parts.map(function (p) {
+      var pct = (Math.abs(p.b) / absSum) * 100;
+      if (pct < 0.6) return '';
+      return '<i style="width:' + pct.toFixed(2) + '%;background:' + esc(p.w.color || '#5E5CE6') + '"></i>';
+    }).join('');
+    return '<div class="whero">' +
+      '<div class="wh-lab">' + esc(t('total_balance')) + '</div>' +
+      '<div class="wh-amt"><span class="wh-cur">' + esc(S.settings.currency) + '</span>' +
+        '<span class="wh-num' + (total < 0 ? ' neg' : '') + '" id="wheroNum">' + money(total, { sym: false }) + '</span></div>' +
+      '<div class="wseg">' + segs + '</div>' +
+    '</div>';
+  }
+
   function walletsHTML() {
     if (!S.wallets.length) return '';
     var cards = S.wallets.map(function (w) {
       var bal = walletBalance(w.id);
-      return '<button class="wcard' + (bal < 0 ? ' neg' : '') + '" type="button" data-act="open-wallet" data-id="' + w.id + '">' +
-        '<span class="wc-ic" style="background:' + esc(w.color || '#5E5CE6') + '">' + esc(w.emoji || '💳') + '</span>' +
-        '<span class="wc-t">' + esc(walletName(w)) + '</span>' +
-        '<span class="wc-v">' + money(Math.abs(bal)) + '</span>' +
+      return '<button class="wcard' + (bal < 0 ? ' neg' : '') + '" type="button" data-act="open-wallet" data-id="' + w.id + '" ' +
+        'style="--wc-grad:' + walletGrad(w) + '">' +
+        '<span class="wc-top">' +
+          '<span class="wc-ic">' + icon(recIcon(w)) + '</span>' +
+          '<span class="wc-t">' + esc(walletName(w)) + '</span>' +
+        '</span>' +
+        '<span class="wc-bot">' +
+          '<span class="wc-lab">' + esc(t('balance')) + '</span>' +
+          '<span class="wc-v"><span class="wc-cur">' + esc(S.settings.currency) + '</span>' +
+            '<span class="wc-num">' + money(bal, { sym: false }) + '</span></span>' +
+        '</span>' +
       '</button>';
     }).join('');
-    cards += '<button class="wcard add" type="button" data-act="new-wallet" aria-label="' + esc(t('wallet_new')) + '">+</button>';
-    return '<div class="wcar" id="wcar">' + cards + '</div>';
+    cards += '<button class="wcard add" type="button" data-act="new-wallet" aria-label="' + esc(t('wallet_new')) + '">' +
+      icon('plus') + '</button>';
+    var dots = S.wallets.map(function (w, i) {
+      return '<i' + (i === 0 ? ' class="on"' : '') + '></i>';
+    }).join('');
+    return walletHeroHTML() +
+      '<div class="wcar" id="wcar">' + cards + '</div>' +
+      '<div class="wdots" id="wdots">' + dots + '</div>';
+  }
+
+  /** keep the dot indicators in sync with the carousel scroll */
+  function bindWalletDots() {
+    var car = document.getElementById('wcar');
+    var dots = document.getElementById('wdots');
+    if (!car || !dots) return;
+    var kids = dots.children;
+    var raf = 0;
+    car.addEventListener('scroll', function () {
+      if (raf) return;
+      raf = requestAnimationFrame(function () {
+        raf = 0;
+        var cards = car.querySelectorAll('.wcard');
+        if (!cards.length) return;
+        var mid = car.scrollLeft + car.clientWidth / 2;
+        var best = 0, bestD = 1e9;
+        for (var i = 0; i < cards.length; i++) {
+          var c = cards[i];
+          var d = Math.abs((c.offsetLeft + c.offsetWidth / 2) - mid);
+          if (d < bestD) { bestD = d; best = i; }
+        }
+        for (var j = 0; j < kids.length; j++) {
+          if (j === best) kids[j].classList.add('on'); else kids[j].classList.remove('on');
+        }
+      });
+    }, { passive: true });
+  }
+
+  /** count-up on the hero total (respects prefers-reduced-motion) */
+  function countUpWalletHero() {
+    var el = document.getElementById('wheroNum');
+    if (!el) return;
+    var target = 0;
+    S.wallets.forEach(function (w) { target += walletBalance(w.id); });
+    var reduce = false;
+    try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    if (reduce) { el.textContent = money(target, { sym: false }); return; }
+    var t0 = 0, dur = 620;
+    function step(ts) {
+      if (!t0) t0 = ts;
+      var p = Math.min(1, (ts - t0) / dur);
+      var e = 1 - Math.pow(1 - p, 3);
+      el.textContent = money(target * e, { sym: false });
+      if (p < 1) requestAnimationFrame(step);
+      else el.textContent = money(target, { sym: false });
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* ---- wallet detail sheet (tap a card) ---- */
+  function openWalletDetail(id) {
+    var w = walletById(id);
+    if (!w) return;
+    var bal = walletBalance(id);
+    var mTxs = monthTxs().filter(function (tx) { return tx.walletId === id; });
+    var ms = sumOf(mTxs);
+    var list = txsSorted().filter(function (tx) { return tx.walletId === id; }).slice(0, 12);
+
+    var h = '<div class="wdet-hero" style="--wc-grad:' + walletGrad(w) + '">' +
+      '<div class="wd-lab">' + esc(walletName(w)) + ' · ' + esc(t('balance')) + '</div>' +
+      '<div class="wd-amt"><span class="wd-cur">' + esc(S.settings.currency) + '</span>' +
+        '<span class="wd-num">' + money(bal, { sym: false }) + '</span></div>' +
+      '<div class="wdet-io">' +
+        '<div><div class="l">' + esc(t('this_month_in')) + '</div><div class="v">' + money(ms.income) + '</div></div>' +
+        '<div><div class="l">' + esc(t('this_month_ex')) + '</div><div class="v">' + money(ms.expense) + '</div></div>' +
+      '</div>' +
+    '</div>';
+
+    h += '<div class="pill-row">' +
+      '<button class="pill accent" type="button" data-act="wallet-edit" data-id="' + w.id + '">' + icon('edit') + ' ' + esc(t('wallet_edit')) + '</button>' +
+      '<button class="pill" type="button" data-act="open-transfer">' + icon('swap') + ' ' + esc(t('wallet_transfer')) + '</button>' +
+    '</div>';
+
+    h += '<div class="sec-title" style="margin:6px 2px 9px;">' + esc(t('recent')) + '</div>';
+    if (!list.length) {
+      h += '<div class="card">' + emptyHTML('receipt', t('no_tx'), t('no_tx_sub')) + '</div>';
+    } else {
+      h += '<div class="card set-group">' + list.map(function (tx) {
+        var c = catById(tx.categoryId);
+        return '<div class="set-item">' + icTile(recIcon(c), c.color) +
+          '<span class="si-t"><span class="si-l">' + esc(txNote(tx) || catName(c)) + '</span>' +
+          '<span class="si-s">' + esc(fmtDate(tx.date)) + '</span></span>' +
+          '<span class="set-val" style="color:' + (tx.type === 'income' ? 'var(--income)' : 'var(--expense)') + '">' +
+            (tx.type === 'income' ? '+' : '−') + money(tx.amount) + '</span></div>';
+      }).join('') + '</div>';
+    }
+
+    var body = document.getElementById('walletDetailBody');
+    if (body) body.innerHTML = h;
+    openSheet('sheetWalletDetail');
   }
 
   var _walletDraft = null;
   function openWalletSheet(id) {
     var existing = id ? walletById(id) : null;
     _walletDraft = existing
-      ? { id: existing.id, bn: existing.bn || '', en: existing.en || '', emoji: existing.emoji || '💳',
-          color: existing.color || WALLET_COLORS[5], opening: existing.opening || 0, isNew: false }
-      : { id: null, bn: '', en: '', emoji: '💳', color: WALLET_COLORS[0], opening: 0, isNew: true };
+      ? { id: existing.id, bn: existing.bn || '', en: existing.en || '', icon: recIcon(existing),
+          emoji: existing.emoji || '', color: existing.color || WALLET_COLORS[5], opening: existing.opening || 0, isNew: false }
+      : { id: null, bn: '', en: '', icon: 'wallet', emoji: '', color: WALLET_COLORS[0], opening: 0, isNew: true };
     paintWalletSheet();
     openSheet('sheetWallet');
   }
@@ -6817,9 +7624,13 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       '<input class="input" type="text" id="walEn" value="' + esc(d.en) + '" maxlength="20" placeholder="bKash" /></div>';
     h += '<div class="field"><label>' + esc(t('wallet_opening')) + ' (' + esc(S.settings.currency) + ')</label>' +
       '<input class="input" type="number" inputmode="decimal" id="walOpening" value="' + esc(String(d.opening || 0)) + '" /></div>';
-    h += '<div class="field"><label>' + esc(t('icon')) + '</label><div class="chips" id="walEmoji">';
-    ['💵','📱','📲','🚀','🏦','💳','🪙','👛','🏧','📈'].forEach(function (em) {
-      h += '<button class="chip' + (d.emoji === em ? ' on' : '') + '" type="button" data-act="pick-wallet-emoji" data-v="' + em + '">' + em + '</button>';
+    h += '<div class="field"><label>' + esc(t('icon')) + '</label><div class="ic-grid" id="walIconGrid">';
+    ['cash','phone-pay','rocket','bank','card','wallet','money-bag','mobile','store','trend-up',
+     'briefcase','cart','food','bus','bulb','house','gift','heart','star','tag','shield','abacus',
+     'chart','receipt','box','users','calendar','clock','repeat','currency','sparkle','target',
+     'layers','database','globe','palette'].forEach(function (k) {
+      h += '<button class="ic-pick' + (recIcon(d) === k ? ' on' : '') + '" type="button" data-act="pick-wallet-icon" data-v="' + k + '" ' +
+        'style="--tile-bg:' + (d.color || '#5E5CE6') + '2E;--tile-fg:' + (d.color || '#5E5CE6') + '">' + icon(k) + '</button>';
     });
     h += '</div></div>';
     h += '<div class="field"><label>' + esc(t('color')) + '</label><div class="chips" id="walColor">';
@@ -6845,12 +7656,12 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     if (!isFinite(op)) op = 0;
 
     if (d.isNew) {
-      S.wallets.push({ id: uid('w'), bn: bn || en, en: en || bn, emoji: d.emoji, color: d.color, opening: op, custom: true });
+      S.wallets.push({ id: uid('w'), bn: bn || en, en: en || bn, icon: d.icon || 'wallet', emoji: '', color: d.color, opening: op, custom: true });
       toast(t('wallet_added'));
     } else {
       var w = walletById(d.id);
       w.bn = bn || w.bn; w.en = en || w.en;
-      w.emoji = d.emoji; w.color = d.color; w.opening = op;
+      w.icon = d.icon || 'wallet'; w.emoji = ''; w.color = d.color; w.opening = op;
       toast(t('saved'));
     }
     save(true); haptic('success');
@@ -7075,7 +7886,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
           '</span>' +
           '<span class="tx-amt ' + (r.type === 'income' ? 'in' : 'ex') + '">' + money(r.amount) + '</span>' +
           '<button class="icon-btn" style="width:34px;height:34px;border-radius:11px" type="button" data-act="recur-toggle" data-id="' + r.id + '" aria-label="' + esc(t(r.paused ? 'resume' : 'pause')) + '">' +
-            esc(r.paused ? '▶' : '⏸') + '</button>' +
+            esc(r.paused ? icon('play') : icon('pause')) + '</button>' +
           '<button class="icon-btn" style="width:34px;height:34px;border-radius:11px" type="button" data-act="recur-del" data-id="' + r.id + '" aria-label="' + esc(t('delete')) + '">' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:16px;height:16px"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13"/></svg></button>' +
         '</div>';
@@ -7256,7 +8067,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     if (!body) return;
     var h = '';
     if (_listening) {
-      h += '<div class="voice-wrap"><div class="voice-ring">🎙️</div>' +
+      h += '<div class="voice-wrap"><div class="voice-ring">' + icon('mic', 'ic-xl') + '</div>' +
         '<p style="font-size:13px;color:var(--text-2);text-align:center">' + esc(t('voice_listening')) + '</p>' +
         '<div class="voice-heard" id="voiceHeard" style="color:var(--text-3)">' + esc(t('voice_hint')) + '</div></div>';
     } else if (_voiceDraft) {
@@ -7278,7 +8089,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       '</div>';
       h += '<p style="font-size:12px;color:var(--text-3);text-align:center;line-height:1.7">' + esc(t('voice_edit_hint')) + '</p>';
     } else {
-      h += '<div class="voice-wrap"><div class="voice-ring">🎙️</div>' +
+      h += '<div class="voice-wrap"><div class="voice-ring">' + icon('mic', 'ic-xl') + '</div>' +
         '<p style="font-size:13px;color:var(--text-2);text-align:center">' + esc(t('voice_error')) + '</p></div>';
     }
     body.innerHTML = h;
@@ -7429,7 +8240,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     if (since !== null && since < days) return '';
     var label = since === null ? t('backup_never') : t('backup_ago', { n: String(num(since)) });
     return '<div class="bk-banner">' +
-      '<span class="bk-ic">💾</span>' +
+      '<span class="bk-ic">' + icon('database') + '</span>' +
       '<span class="bk-t"><span class="bk-l">' + esc(t('backup_remind')) + '</span>' +
         '<span class="bk-s">' + esc(label) + '</span></span>' +
       '<button class="btn btn-primary btn-sm" type="button" data-act="backup-now">' + esc(t('backup_now')) + '</button>' +
@@ -7936,6 +8747,37 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
              monthProfit: monthProfit, top: top, low: low, stockValue: stockValue };
   }
 
+  function openDev() {
+    paintDev();
+    openSheet('sheetDev');
+  }
+
+  function paintDev() {
+    var body = document.getElementById('devBody');
+    if (!body) return;
+    var h = '';
+    h += '<div class="dev-hero">';
+    h += '<span class="dh-av">R4</span>';
+    h += '<div class="dh-n">' + esc(DEV_NAME) + '</div>';
+    h += '<p class="dh-b">' + esc(t('dev_bio')) + '</p>';
+    h += '<span class="dh-v">' + icon('sparkle') + ' v' + esc(APP_VERSION) + '</span>';
+    h += '</div>';
+
+    h += '<div class="pill-row">';
+    h += '<a class="pill accent" href="' + DEV_TG_URL + '" target="_blank" rel="noopener noreferrer">' +
+      iconFill('telegram') + ' @' + esc(DEV_TG) + '</a>';
+    h += '</div>';
+
+    h += '<div class="pill-row">';
+    h += '<button class="pill" type="button" data-act="feedback">' + icon('bug') + ' ' + esc(t('feedback')) + '</button>';
+    h += '<button class="pill" type="button" data-act="share-app">' + icon('share') + ' ' + esc(t('share_app')) + '</button>';
+    h += '</div>';
+
+    h += '<div class="dev-foot">' + esc(t('made_with')) + ' ' + icon('heart') + ' by ' + esc(DEV_NAME) +
+      ' · © 2026</div>';
+    body.innerHTML = h;
+  }
+
   function openAbout() {
     UI.eggTaps = 0;
     paintAbout();
@@ -7952,28 +8794,8 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     h += '<span class="vbadge">v' + esc(APP_VERSION) + '</span>';
     h += '</div>';
 
-    /* developer card */
-    h += '<div class="dev-card">';
-    h += '<span class="dev-av">R4</span>';
-    h += '<span class="grow" style="min-width:0"><span class="tx-name">' + esc(DEV_NAME) + '</span>' +
-      '<span class="tx-sub">' + esc(t('dev_intro')) + '</span></span>';
-    h += '</div>';
-
-    /* contact pills */
-    h += '<div class="pill-row">';
-    h += '<a class="pill accent" href="' + DEV_TG_URL + '" target="_blank" rel="noopener noreferrer">' +
-      '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 3.3 2.6 10.6c-.9.4-.9 1.6 0 1.9l4.5 1.5 1.7 5.2c.2.8 1.2 1 1.7.3l2.3-2.8 4.4 3.3c.6.5 1.5.1 1.7-.7l3-13.3c.2-.9-.7-1.6-1.4-1.3ZM9.6 14.4l8-6.2-6.7 7.5-.3 3-1-4.3Z"/></svg>' +
-      '@' + esc(DEV_TG) + '</a>';
-    h += '</div>';
-
-    /* action pills */
-    h += '<div class="pill-row">';
-    h += '<button class="pill" type="button" data-act="feedback">🐞 ' + esc(t('feedback')) + '</button>';
-    h += '<button class="pill" type="button" data-act="share-app">📤 ' + esc(t('share_app')) + '</button>';
-    h += '</div>';
-
     /* privacy card */
-    h += '<div class="privacy-card"><span class="pc-ic">🔒</span><div>' +
+    h += '<div class="privacy-card"><span class="pc-ic">' + icon('lock') + '</span><div>' +
       '<b style="font-size:13.5px">' + esc(t('privacy_title')) + '</b>' +
       '<p>' + esc(t('privacy_note')) + '</p></div></div>';
 
@@ -7992,7 +8814,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     h += '</div>';
 
     /* footer */
-    h += '<div class="about-foot">Made with ❤️ by ' + esc(DEV_NAME) + '<br>© 2026</div>';
+    h += '<div class="about-foot">Made with ' + icon('heart') + ' by ' + esc(DEV_NAME) + '<br>© 2026</div>';
     body.innerHTML = h;
 
     /* easter egg: 7 taps on the app icon */
@@ -8073,7 +8895,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     var host = document.getElementById('view-shop');
     if (!host) return;
     if (!shopOn()) {
-      host.innerHTML = '<div class="card">' + emptyHTML('🏪', t('shop_mode'), t('shop_mode_sub')) +
+      host.innerHTML = '<div class="card">' + emptyHTML('store', t('shop_mode'), t('shop_mode_sub')) +
         '<button class="btn btn-primary btn-block" type="button" style="margin-top:12px" data-act="shop-toggle">' +
         esc(t('shop_mode')) + '</button></div>';
       return;
@@ -8117,7 +8939,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     if (st.low.length) {
       h += '<div class="sec-head mt16"><span class="sec-title">' + esc(t('low_stock')) + '</span></div>';
       h += '<div class="card"><div class="chips">' + st.low.map(function (p) {
-        return '<span class="chip" style="border-color:var(--expense)">⚠️ ' + esc(p.name) + ' · ' + num(String(p.qty)) + ' ' + esc(p.unit || '') + '</span>';
+        return '<span class="chip" style="border-color:var(--expense)">' + icon('warning') + ' ' + esc(p.name) + ' · ' + num(String(p.qty)) + ' ' + esc(p.unit || '') + '</span>';
       }).join('') + '</div></div>';
     }
 
@@ -8134,7 +8956,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     h += '<div class="sec-head mt16"><span class="sec-title">' + esc(t('stock')) + '</span>' +
       '<button class="sec-link" type="button" data-act="new-product">+ ' + esc(t('add')) + '</button></div>';
     if (!S.products.length) {
-      h += '<div class="card">' + emptyHTML('📦', t('prod_none'), t('add_product')) + '</div>';
+      h += '<div class="card">' + emptyHTML('box', t('prod_none'), t('add_product')) + '</div>';
     } else {
       h += '<div class="shop-grid">' + S.products.map(function (p) {
         var low = lowStock(p);
