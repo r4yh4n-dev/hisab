@@ -770,6 +770,12 @@ body[data-shop="true"] .tab-pill{width:calc((100% - 12px) / 6);}
   padding:12px 18px 0;
   display:flex;gap:10px;
 }
+/* v2.2.1 · the person-sheet delete button must always be reachable: it sticks
+   to the bottom of the scrollable body instead of hiding below the fold. */
+.sheet-body .btn-block[data-act="del-person"]{
+  position:sticky;bottom:0;z-index:3;
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+}
 
 /* form fields */
 .field{margin-bottom:14px;}
@@ -1691,20 +1697,72 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 .wg-nav button:disabled{opacity:.35;}
 .wg-nav svg{width:15px;height:15px;}
 
-.wg-body{display:flex;align-items:center;gap:16px;margin-top:14px;position:relative;z-index:1;}
-.wg-ring{position:relative;flex:0 0 auto;width:104px;height:104px;}
-.wg-ring canvas{width:104px;height:104px;}
-.wg-ring-c{position:absolute;inset:0;display:grid;place-items:center;text-align:center;pointer-events:none;}
-.wg-ring-c .r-pct{font-size:19px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;}
-.wg-ring-c .r-lab{font-size:9.5px;font-weight:700;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;}
-.wg-stats{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:9px;}
-.wg-stat{display:flex;align-items:center;gap:8px;}
-.wg-stat .s-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
-.wg-stat .s-lab{font-size:11.5px;font-weight:600;color:var(--text-3);flex:1 1 auto;}
-.wg-stat .s-val{font-size:14px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums;}
+/* v2.2.2 — the old .wg-body / .wg-ring / .wg-stats / .wg-stat rules that sat
+   here were REMOVED. .wg-ring was the duplicate that collapsed the summary
+   ring, and the rest described the pre-2.2.2 static stat list, which the
+   explicit .sum-grid block below replaced. Leaving them in place is what
+   caused bug #1, so they are gone rather than merely overridden. */
 
-.wg-spark{margin-top:12px;position:relative;z-index:1;}
+.wg-spark{margin-top:12px;position:relative;z-index:1;clear:both;}
 .wg-spark canvas{width:100%;height:44px;}
+
+/* ============================================================
+   v2.2.2 FIX \u00b7 MONTHLY-SUMMARY RING + LEGEND  (they used to overlap)
+   Rules that keep them apart for good:
+     \u00b7 the WRAPPER (.ring) is the positioning context and defines the box
+     \u00b7 the canvas fills the wrapper (100%) and is rotated -90deg \u2014 a square
+       rotated in place can never exceed its own box
+     \u00b7 the LABEL is a SEPARATE absolutely-positioned layer INSIDE the
+       wrapper (never inside the rotated canvas, never against the card) and
+       carries NO transform
+     \u00b7 the glow is a drop-shadow ON the canvas, so it cannot spill over the
+       legend column
+     \u00b7 the legend column is minmax(0,1fr) with clamp() type, so amounts
+       right-align and never grow the column
+   ============================================================ */
+.sum-grid{
+  display:grid;
+  grid-template-columns:112px minmax(0,1fr);
+  gap:16px;align-items:center;
+  margin-top:14px;position:relative;z-index:1;
+}
+.ring{position:relative;width:112px;height:112px;justify-self:center;}
+.ring > canvas{
+  display:block;width:100% !important;height:100% !important;
+  transform:rotate(-90deg);
+  filter:drop-shadow(0 0 6px rgba(94,92,230,.30));
+}
+.ring-label{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;pointer-events:none;
+}
+.ring-label .r-pct{
+  font-size:20px;font-weight:700;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;line-height:1.1;
+}
+.ring-label .r-lab{
+  font-size:11px;font-weight:600;color:var(--text-3);
+  margin-top:1px;line-height:1.2;
+  max-width:96px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+/* legend column: dot / label / amount, amounts right-aligned, never wrapping */
+.sum-legend{display:flex;flex-direction:column;gap:9px;min-width:0;}
+.sum-row{
+  display:grid;grid-template-columns:10px minmax(0,1fr) auto;
+  align-items:center;gap:8px;min-width:0;
+}
+.sum-row .sd{width:10px;height:10px;border-radius:50%;flex:0 0 auto;}
+.sum-row .sl{
+  font-size:clamp(10.5px,3.2vw,11.5px);font-weight:600;color:var(--text-3);
+  min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.sum-row .sv{
+  font-size:clamp(11.5px,3.4vw,14px);font-weight:700;
+  font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;
+}
+.sum-row .sv.neg{color:var(--expense);}
+@media (prefers-reduced-transparency:reduce){.ring > canvas{filter:none;}}
 .wg-foot{
   display:flex;align-items:center;justify-content:space-between;
   margin-top:8px;font-size:10.5px;font-weight:600;color:var(--text-3);
@@ -1732,6 +1790,43 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 }
 @media (min-width:600px){
   .sheet{border-radius:34px 34px 0 0;}
+}
+/* v2.2.1 · narrow phones (320-400px): the weekly-widget ring and its legend
+   must never overlap, so stack them and shrink the ring. Same treatment for
+   the reports donut/legend and the budget ring/rows. */
+@media (max-width:400px){
+  /* v2.2.2 \u00b7 the summary ring + legend shrink and keep their gap \u2014 no
+     stacking needed because the columns are now explicit and bounded. */
+  .sum-grid{grid-template-columns:96px minmax(0,1fr);gap:12px;}
+  .ring{width:96px;height:96px;}
+  .ring-label .r-pct{font-size:17px;}
+  .ring-label .r-lab{font-size:10px;max-width:82px;}
+  .sum-row{grid-template-columns:8px minmax(0,1fr) auto;gap:6px;}
+  .sum-row .sd{width:8px;height:8px;}
+  .sum-row .sl{font-size:10.5px;}
+  .sum-row .sv{font-size:11.5px;}
+  .donut-wrap canvas{max-width:190px;}
+  .legend-row{font-size:12px;gap:7px;}
+  .legend-row .lg-pct{min-width:34px;}
+  .budget-ring{width:112px;height:112px;}
+  .budget-ring canvas{width:112px;height:112px;}
+  .budget-ring .br-pct{font-size:22px;}
+  .budget-row{gap:8px;}
+  .budget-row .b-lab{flex:0 0 62px;font-size:12px;}
+  .wgrid{gap:9px;}
+  .wg-card{padding:11px;min-height:124px;}
+  .wg-card .wg-v{font-size:17px;}
+}
+/* v2.2.2 \u00b7 very narrow phones (\u2264 340px): one more shrink so the ring and
+   the legend still keep a gap and ৳-amounts never push into the ring. */
+@media (max-width:340px){
+  .sum-grid{grid-template-columns:84px minmax(0,1fr);gap:10px;}
+  .ring{width:84px;height:84px;}
+  .ring-label .r-pct{font-size:15px;}
+  .ring-label .r-lab{font-size:9.5px;max-width:74px;}
+  .sum-row{gap:5px;}
+  .sum-row .sl{font-size:10px;}
+  .sum-row .sv{font-size:11px;}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;}
@@ -1941,18 +2036,23 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 }
 .wseg > i.dim{opacity:.32;}
 
-/* the carousel itself */
+/* the carousel itself — v2.2.2: the first card sits flush with the 16px page
+   margin. `padding-inline:16px` + `margin:0 -16px` cancels the page gutter
+   exactly, so card #1 starts 16px from the screen edge; scroll-padding keeps
+   the snap targets aligned with that same inset. */
 .wcar{
   display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;
   scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
   padding:4px 16px 12px;margin:0 -16px;
+  padding-inline:16px;scroll-padding-inline:16px;
   scrollbar-width:none;
 }
 .wcar::-webkit-scrollbar{display:none;}
 .wcard{
   position:relative;overflow:hidden;
   flex:0 0 auto;scroll-snap-align:start;
-  width:62vw;min-width:170px;max-width:250px;height:124px;
+  /* v2.2.2: min(72vw,280px) so the next card always peeks in on any phone */
+  width:min(72vw,280px);min-width:170px;height:124px;
   padding:14px 15px;border-radius:20px;
   display:flex;flex-direction:column;justify-content:space-between;
   text-align:left;
@@ -2028,6 +2128,115 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 }
 .wpill:active{transform:scale(.95);}
 .wpill .ic{width:15px;height:15px;}
+
+/* ==========================================================================
+   v2.2.0 · HOME WALLET STRIP — slim pills (~56px) so the whole wallet block
+   stays under ~130px on a 360x800 phone. At most 5 pills + a "সব দেখুন" pill.
+   ========================================================================== */
+.wstrip{
+  display:flex;gap:9px;overflow-x:auto;scroll-snap-type:x mandatory;
+  padding:1px 16px 6px;margin:0 -16px;scrollbar-width:none;
+  padding-inline:16px;scroll-padding-inline:16px;
+  -webkit-overflow-scrolling:touch;
+}
+.wstrip::-webkit-scrollbar{display:none;}
+/* 4px flex spacers so the first pill starts on the 16px margin and the last
+   one can always be scrolled fully into view */
+.wstrip-sp{flex:0 0 4px;align-self:stretch;}
+.wpill2 .wpill2-v{display:flex;align-items:baseline;gap:1px;}
+.wpill2 .wpill2-cur{font-size:11px;font-weight:600;opacity:.8;}
+.wpill2{
+  flex:0 0 auto;scroll-snap-align:start;
+  min-width:104px;min-height:56px;
+  display:flex;flex-direction:column;justify-content:center;gap:2px;
+  padding:7px 11px;border-radius:17px;
+  background:var(--glass-bg);border:1px solid var(--line);
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  position:relative;overflow:hidden;
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+.wpill2:active{transform:scale(.95);}
+.wpill2 .wpill2-ic{
+  width:20px;height:20px;border-radius:7px;flex:0 0 auto;
+  display:grid;place-items:center;
+}
+.wpill2 .wpill2-ic .ic{width:13px;height:13px;}
+.wpill2 .wpill2-t{font-size:11px;font-weight:600;color:var(--text-3);line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:96px;}
+.wpill2 .wpill2-v{font-size:14px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums;}
+.wpill2.neg .wpill2-v{color:var(--expense);}
+.wpill2-bar{position:absolute;left:0;right:0;bottom:0;height:2.5px;background:var(--line);}
+.wpill2-bar > i{display:block;height:100%;}
+.wpill2.more{justify-content:center;align-items:center;min-width:84px;gap:4px;}
+.wpill2.more .wpill2-t{max-width:none;}
+
+/* the single Home hero: total + the month's in/out in ONE row + share bar */
+.whero .wh-row{display:flex;gap:9px;margin-top:9px;flex-wrap:wrap;}
+.whero .wh-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:99px;
+  font-size:11px;font-weight:600;color:var(--text-3);
+  background:var(--glass-bg);border:1px solid var(--line);
+}
+.whero .wh-chip b{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;}
+.whero .wh-chip .dot{width:6px;height:6px;border-radius:50%;}
+.whero .wh-chip .dot.in{background:var(--income);}
+.whero .wh-chip .dot.ex{background:var(--expense);}
+
+/* full wallets screen (2-column cards + progress rings) */
+.wgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px;margin-top:2px;}
+.wg-card{
+  position:relative;overflow:hidden;
+  padding:13px;border-radius:20px;text-align:left;
+  background:var(--wc-grad);border:1px solid rgba(255,255,255,.14);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  display:flex;flex-direction:column;gap:7px;min-height:132px;
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+}
+.wg-card:active{transform:scale(.965);}
+.wg-card .wg-top{display:flex;align-items:center;gap:7px;min-width:0;}
+.wg-card .wg-ic{width:28px;height:28px;border-radius:10px;flex:0 0 auto;
+  display:grid;place-items:center;background:rgba(255,255,255,.16);}
+.wg-card .wg-ic .ic{width:16px;height:16px;}
+.wg-card .wg-n{font-size:12px;font-weight:600;line-height:1.15;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wg-card .wg-tag{font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.7;}
+.wg-card .wg-v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+.wg-card .wg-sub{font-size:10.5px;font-weight:600;opacity:.78;font-variant-numeric:tabular-nums;}
+.wg-card.neg .wg-v{color:#FF453A;}
+.wg-card .wg-bar{height:4px;border-radius:99px;background:rgba(255,255,255,.22);overflow:hidden;}
+.wg-card .wg-bar > i{display:block;height:100%;border-radius:99px;}
+.wg-card.add{align-items:center;justify-content:center;background:var(--glass-bg);border-style:dashed;}
+.wg-card.add .ic{width:24px;height:24px;opacity:.55;}
+/* v2.2.2 FIX — ROOT CAUSE of the monthly-summary ring overlap.
+   This block reused the SAME selector name as the monthly-summary ring above
+   (.wg-ring, 104px). A later rule of equal specificity wins, so the widget's
+   ring wrapper was forced to 46x46 while its canvas still painted at
+   104x104: the percent label jumped to the card corner and the legend was
+   covered by the overflowing canvas. The wallets-screen progress ring now
+   has its own class (.wg-prog) so the two can never collide again. */
+.wg-prog{position:relative;width:46px;height:46px;flex:0 0 auto;}
+.wg-prog canvas{width:46px;height:46px;display:block;}
+.wg-prog .wg-prog-c{position:absolute;inset:0;display:grid;place-items:center;
+  font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;}
+
+/* the wallet-note card shown wherever wallets are explained */
+.wnote{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:12px 13px;border-radius:16px;margin:10px 0 4px;
+  background:var(--glass-bg);border:1px solid var(--line);
+}
+.wnote .ic{width:17px;height:17px;flex:0 0 auto;margin-top:1px;color:var(--accent);}
+.wnote p{font-size:11.5px;line-height:1.65;color:var(--text-3);margin:0;}
+
+/* wallet type / method chips inside sheets */
+.tchip{
+  display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;
+  font-size:10px;font-weight:700;letter-spacing:.02em;
+}
+
+/* v2.2.0 · shorter numpad keys so the add sheet fits more on screen */
+.key{min-height:52px;}
 
 /* wallet detail sheet */
 .wdet-hero{
@@ -2254,6 +2463,12 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/></symbol>
     <symbol id="i-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
     <symbol id="i-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <!-- v2.2.0 payment-method icons -->
+    <symbol id="i-banknote" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6.5" width="20" height="11" rx="2.2"/><circle cx="12" cy="12" r="2.4"/><path d="M6 10v4M18 10v4"/></symbol>
+    <symbol id="i-smartphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M10.5 5.5h3"/><circle cx="12" cy="18" r="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-smartphone-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M10.5 5.5h3"/><path d="M10 15.5l4-4M10.5 11.5h3.5V15"/></symbol>
+    <symbol id="i-landmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9.5 12 4l8.5 5.5"/><path d="M5.5 9.5v8M10 9.5v8M14 9.5v8M18.5 9.5v8"/><path d="M3.5 20.5h17"/></symbol>
+    <symbol id="i-send-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c3.5 1.5 5.5 5 5.5 9l-2.5 3h-6l-2.5-3c0-4 2-7.5 5.5-9Z"/><circle cx="12" cy="10" r="1.8"/><path d="M9 15.5 7 20l3-1.5M15 15.5 17 20l-3-1.5"/></symbol>
   </defs>
 </svg>
 
@@ -2453,6 +2668,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     <div class="field">
       <label>ওয়ালেট</label>
       <div class="chips" id="txWalletChips"></div>
+      <p class="hint" style="font-size:11px;color:var(--text-3);line-height:1.6;margin:7px 0 0">ওয়ালেট মানে আপনার নিজের টাকার ভাগ। এটা বিকাশ, নগদ বা ব্যাংকের আসল ব্যালেন্সের সাথে যুক্ত নয়।</p>
     </div>
     <div class="field">
       <label>পুনরাবৃত্তি</label>
@@ -2847,13 +3063,69 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     if (!S) issues.push('state failed to load');
     if (S && (!Array.isArray(S.categories) || !S.categories.length)) issues.push('no categories');
     if (S && (!Array.isArray(S.wallets) || !S.wallets.length)) issues.push('no wallets');
+    if (S && S.wallets && !S.wallets.some(function (w) { return w.id === MAIN_WALLET_ID; })) {
+      issues.push('no main wallet');
+    }
     if (document.getElementById('view-shop') === null) issues.push('shop view missing from DOM');
     if (!document.getElementById('installBanner')) issues.push('install banner missing');
+
+    /* ---- v2.2.0 · ICON VALIDATOR ------------------------------------------
+       Collect every icon key the UI can ask for — the DOM (data-icon), the
+       data constants (categories, wallets, methods, recurring templates) and
+       the onboarding/toast/empty-state strings — and warn about any key with
+       no matching <symbol id="i-...">. The renderer falls back to 'tag', so a
+       tile can never be blank; this just tells us a key is missing. */
+    var used = {};
+    function noteKey(k) { if (k) used[k] = true; }
+    try {
+      var nodes = document.querySelectorAll('[data-icon]');
+      for (var n = 0; n < nodes.length; n++) noteKey(nodes[n].getAttribute('data-icon'));
+    } catch (err) {}
+    (S.categories || []).forEach(function (c) { noteKey(catIcon(c)); });
+    (S.wallets || []).forEach(function (w) { noteKey(walletIcon(w)); });
+    methods().forEach(function (m) { noteKey(methodIcon(m)); });
+    (S.recurring || []).forEach(function (r) { noteKey(catIcon(catById(r.categoryId))); });
+    ['repeat', 'clock', 'lock', 'digits', 'confetti', 'store', 'message', 'send',
+     'tag', 'wallet', 'swap', 'tag'].forEach(noteKey);
+    var missing = [];
+    Object.keys(used).forEach(function (k) { if (!hasIcon(k)) missing.push(k); });
+    missing.forEach(function (k) {
+      try { console.warn('missing icon: ' + k); } catch (err) {}
+      warnOnce('icon-' + k, 'missing icon: ' + k);
+    });
+    if (missing.length) issues.push('missing icon keys: ' + missing.join(', '));
+
+    /* ---- v2.2.0 · EMOJI SCAN ----------------------------------------------
+       No hard-coded emoji may remain in the UI. The legacy 'emoji:' fields on
+       the default data constants are deliberate (they keep old backup files
+       importable) so they are excluded by construction: this scan runs over
+       the rendered interface strings, not over the data constants. */
+    try {
+      var EMOJI_RE = /\p{Extended_Pictographic}/u;
+      var tainted = [];
+      var walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+      var txt;
+      while ((txt = walk.nextNode())) {
+        var par = txt.parentNode && txt.parentNode.nodeName;
+        /* skip <script>/<style> text \u2014 only real interface strings count */
+        if (par === 'SCRIPT' || par === 'STYLE') continue;
+        var v = txt.nodeValue || '';
+        if (EMOJI_RE.test(v)) tainted.push(v.trim().slice(0, 24));
+      }
+      if (tainted.length) {
+        try { console.warn('[Hisab] ' + tainted.length + ' emoji in rendered UI: ' + tainted.join(' | ')); } catch (err) {}
+        issues.push(tainted.length + ' emoji left in the rendered UI');
+      } else {
+        try { console.log('[Hisab] emoji scan: 0'); } catch (err) {}
+      }
+    } catch (err) {}
+
     if (issues.length) {
       for (var i = 0; i < issues.length; i++) warnOnce('selfcheck-' + i, issues[i]);
     } else {
       try { console.log('[Hisab v' + APP_VERSION + '] self-check OK · ' +
-        S.txs.length + ' txs · ' + S.people.length + ' people · ' + S.wallets.length + ' wallets'); } catch (err) {}
+        S.txs.length + ' txs · ' + S.people.length + ' people · ' + S.wallets.length + ' wallets · ' +
+        iconKeys() && Object.keys(iconKeys()).length + ' icons'); } catch (err) {}
     }
     return issues;
   }
@@ -2886,6 +3158,10 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   var BN_DIGITS = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   function toBn(str) {
     return String(str).replace(/[0-9]/g, function (d) { return BN_DIGITS[+d]; });
+  }
+  /** Bengali digits → ASCII digits (for parsing / switching the setting off) */
+  function fromBn(str) {
+    return String(str).replace(/[\u09e6-\u09ef]/g, function (d) { return String(BN_DIGITS.indexOf(d)); });
   }
   /** localise digits according to the user's setting */
   function num(v) {
@@ -3353,6 +3629,10 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     recur_auto: ['স্বয়ংক্রিয়', 'Automatic'],
     rep: ['পুনরাবৃত্তি', 'Repeat'],
     rep_none: ['হবে না', 'Does not repeat'],
+    rep_daily: ['প্রতিদিন', 'Daily'],
+    rep_weekly: ['সাপ্তাহিক', 'Weekly'],
+    rep_monthly: ['মাসিক', 'Monthly'],
+    rep_yearly: ['বার্ষিক', 'Yearly'],
     paused: ['বন্ধ আছে', 'Paused'],
     pause: ['বন্ধ করুন', 'Pause'],
     resume: ['চালু করুন', 'Resume'],
@@ -3465,6 +3745,31 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     whats_new: ['নতুন কী আছে', 'What’s new'],
     egg_found: ['আপনি গোপন ইস্টার এগ খুঁজে পেয়েছেন!', 'You found the hidden easter egg!'],
 
+    /* ---- v2.2.0 · wallets / payment methods ---- */
+    wallets: ['ওয়ালেট', 'Wallets'],
+    see_all: ['সব দেখুন', 'See all'],
+    all_wallets: ['সব ওয়ালেট', 'All wallets'],
+    move_money: ['টাকা সরান', 'Move money'],
+    wallet_note_lab: ['জেনে রাখুন', 'Good to know'],
+    wallet_type: ['ধরন', 'Type'],
+    wallet_goal: ['লক্ষ্যমাত্রা', 'Goal amount'],
+    wallet_goal_date: ['লক্ষ্যের তারিখ', 'Target date'],
+    wallet_monthly_limit: ['মাসিক লিমিট', 'Monthly limit'],
+    wallet_alloc: ['মাসিক অটো-সঞ্চয়', 'Monthly auto-save'],
+    wallet_leftover: ['মাস শেষে বাকি টাকা', 'Leftover at month end'],
+    wallet_leftover_return: ['মূল ওয়ালেটে ফেরত', 'Return to main wallet'],
+    wallet_leftover_carry: ['পরের মাসে যাবে', 'Carry to next month'],
+    wallet_remaining: ['বাকি আছে', 'Remaining'],
+    wallet_need_more: ['আর লাগবে', 'Still needed'],
+    wallet_month_in: ['এ মাসে ঢুকেছে', 'In this month'],
+    wallet_month_out: ['এ মাসে খরচ', 'Spent this month'],
+    wallet_overdraw_q: ['ওয়ালেটে যথেষ্ট টাকা নেই', 'Not enough in this wallet'],
+    wallet_overdraw_sub: ['তবুও সরাবেন? ব্যালেন্স ঋণাত্মক হয়ে যাবে।', 'Move anyway? The balance will go negative.'],
+    wallet_moved: ['টাকা সরানো হয়েছে', 'Money moved'],
+    wallet_carry_done: ['সঞ্চয় যোগ হয়েছে', 'Savings added'],
+    main_wallet: ['মূল ওয়ালেট', 'Main wallet'],
+    wallet_main_locked: ['মূল ওয়ালেট মুছে ফেলা যাবে না', 'The main wallet cannot be deleted'],
+
     /* ---- onboarding ---- */
     onb_skip: ['এড়িয়ে যান', 'Skip'],
     onb_next: ['পরবর্তী', 'Next'],
@@ -3502,7 +3807,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
    * Shown in Settings › About, in the changelog, in the feedback message and
    * in backup filenames. Bump it here only.
    */
-  var APP_VERSION = '2.1.0';
+  var APP_VERSION = '2.2.2';
 
   /* ======================================================================
      2.0  v2.1.0 · SVG ICON SYSTEM
@@ -3527,6 +3832,45 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   function icon(name, cls) {
     var n = name || 'tag';
     return '<svg class="ic' + (cls ? ' ' + cls : '') + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>';
+  }
+
+  /* ---- icon resolution (v2.2.0) ------------------------------------------
+     ONE place decides which sprite key an item uses, so a tile can never be
+     blank: stored icon key -> legacy emoji -> generic 'tag'. */
+  var ICON_KEYS = null;
+  function iconKeys() {
+    if (ICON_KEYS) return ICON_KEYS;
+    ICON_KEYS = {};
+    try {
+      var syms = document.querySelectorAll('#iconSprite symbol');
+      for (var i = 0; i < syms.length; i++) {
+        var id = syms[i].getAttribute('id') || '';
+        if (id.indexOf('i-') === 0) ICON_KEYS[id.slice(2)] = true;
+      }
+    } catch (err) {}
+    return ICON_KEYS;
+  }
+  function hasIcon(key) { return !!(key && iconKeys()[key]); }
+  /** category -> icon key (icon key first, then legacy emoji, then 'tag') */
+  function catIcon(cat) {
+    if (!cat) return 'tag';
+    if (hasIcon(cat.icon)) return cat.icon;
+    if (cat.emoji) return emojiIcon(cat.emoji);
+    return 'tag';
+  }
+  /** wallet -> icon key */
+  function walletIcon(w) {
+    if (!w) return 'wallet';
+    if (hasIcon(w.icon)) return w.icon;
+    if (w.emoji) return emojiIcon(w.emoji);
+    return 'wallet';
+  }
+  /** payment method -> icon key */
+  function methodIcon(m) {
+    if (!m) return 'tag';
+    if (hasIcon(m.icon)) return m.icon;
+    if (m.emoji) return emojiIcon(m.emoji);
+    return 'tag';
   }
   function iconFill(name, cls) {
     var n = name || 'tag';
@@ -3632,8 +3976,9 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   /** the icon key for a category / wallet / method record (new or legacy) */
   function recIcon(rec) {
     if (!rec) return 'tag';
-    if (rec.icon) return rec.icon;
-    return emojiIcon(rec.emoji);
+    if (hasIcon(rec.icon)) return rec.icon;
+    if (rec.emoji) return emojiIcon(rec.emoji);
+    return 'tag';
   }
 
   var APP_NAME = 'হিসাব — Hisab';
@@ -3642,16 +3987,65 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   var DEV_TG_URL = 'https://t.me/r4yh4nxyz';
 
   /*
-   * v4 · WALLETS / ACCOUNTS
-   * These five cover every payment method the app shipped with, so the
-   * method→wallet migration is a straight id match and no history is lost.
+   * v2.2.0 · WALLETS (ওয়ালেট) — purpose-based pots of the user's OWN money.
+   *
+   * A PAYMENT METHOD (পেমেন্ট মাধ্যম) is only a LABEL of how a transaction was
+   * paid (Cash / bKash / Nagad / Rocket / Bank). It has NO balance — it exists
+   * for filters and for the "কোন মাধ্যমে কত খরচ" report.
+   *
+   * A WALLET has a balance, a purpose (type), an optional goal with a target
+   * date, an optional monthly limit (budget wallets) and an optional monthly
+   * allocation moved in automatically from the main wallet.
+   *
+   * The two are deliberately different things. The app never claims to show a
+   * real bKash / Nagad / bank balance from the network — see WALLET_NOTE.
    */
+  var MAIN_WALLET_ID = 'main';
+
+  var WALLET_NOTE_BN = 'ওয়ালেট মানে আপনার নিজের টাকার ভাগ। এটা বিকাশ, নগদ বা ব্যাংকের আসল ব্যালেন্সের সাথে যুক্ত নয়।';
+  var WALLET_NOTE_EN = 'A wallet is a share of your own money. It is not connected to your real bKash, Nagad or bank balance.';
+  function walletNote() { return S.settings.lang === 'en' ? WALLET_NOTE_EN : WALLET_NOTE_BN; }
+
+  /* the four wallets a fresh install starts with */
   var DEFAULT_WALLETS = [
-    { id: 'cash',   bn: 'ক্যাশ',  en: 'Cash',   icon: 'cash',      emoji: '💵', color: '#34C759', opening: 0 },
-    { id: 'bkash',  bn: 'বিকাশ',  en: 'bKash',  icon: 'phone-pay', emoji: '📱', color: '#E2136E', opening: 0 },
-    { id: 'nagad',  bn: 'নগদ',    en: 'Nagad',  icon: 'phone-pay', emoji: '📲', color: '#EE7623', opening: 0 },
-    { id: 'rocket', bn: 'রকেট',   en: 'Rocket', icon: 'rocket',    emoji: '🚀', color: '#8C3494', opening: 0 },
-    { id: 'bank',   bn: 'ব্যাংক', en: 'Bank',   icon: 'bank',      emoji: '🏦', color: '#32ADE6', opening: 0 }
+    { id: 'main',      bn: 'মূল ওয়ালেট',    en: 'Main wallet',     icon: 'wallet',    emoji: '💰', color: '#5E5CE6',
+      type: 'main',      opening: 0, main: true },
+    { id: 'savings',   bn: 'সঞ্চয় ওয়ালেট',  en: 'Savings wallet',  icon: 'money-bag', emoji: '🐖', color: '#34C759',
+      type: 'savings',   opening: 0, goal: 50000, goalDate: '', monthlyAlloc: 0 },
+    { id: 'emergency', bn: 'জরুরি তহবিল',   en: 'Emergency fund',  icon: 'shield',    emoji: '🚑', color: '#FF9500',
+      type: 'emergency', opening: 0, goal: 20000, goalDate: '', monthlyAlloc: 0 },
+    { id: 'budget',    bn: 'মাসিক বাজেট',   en: 'Monthly budget',  icon: 'calendar',  emoji: '📅', color: '#32ADE6',
+      type: 'budget',    opening: 0, monthlyLimit: 15000, leftover: 'return' }
+  ];
+
+  /* wallet types, with a label and a tint for the type chip */
+  var WALLET_TYPES = ['main', 'savings', 'emergency', 'budget', 'goal', 'custom'];
+  var WALLET_TYPE_COLOR = { main: '#5E5CE6', savings: '#34C759', emergency: '#FF9500',
+                            budget: '#32ADE6', goal: '#FF2D55', custom: '#8E8E93' };
+  var WALLET_TYPE_LABEL = {
+    main:      ['প্রধান', 'Main'],
+    savings:   ['সঞ্চয়', 'Savings'],
+    emergency: ['জরুরি', 'Emergency'],
+    budget:    ['বাজেট', 'Budget'],
+    goal:      ['লক্ষ্য', 'Goal'],
+    custom:    ['নিজের', 'Custom']
+  };
+  function walletTypeLabel(w) {
+    var row = WALLET_TYPE_LABEL[(w && w.type) || 'custom'] || WALLET_TYPE_LABEL.custom;
+    return row[S.settings.lang === 'en' ? 1 : 0];
+  }
+
+  /*
+   * An old (v2.0–v2.1) wallet mirrored a payment method. Kept here so an old
+   * backup file or an old IndexedDB blob still migrates with the same names
+   * and colours — the emoji field is preserved only for that lookup.
+   */
+  var LEGACY_WALLETS = [
+    { id: 'cash',   bn: 'ক্যাশ',  en: 'Cash',   icon: 'banknote',          emoji: '💵', color: '#34C759' },
+    { id: 'bkash',  bn: 'বিকাশ',  en: 'bKash',  icon: 'smartphone',        emoji: '📱', color: '#E2136E' },
+    { id: 'nagad',  bn: 'নগদ',    en: 'Nagad',  icon: 'smartphone-arrow',  emoji: '📲', color: '#EE7623' },
+    { id: 'rocket', bn: 'রকেট',   en: 'Rocket', icon: 'send-rocket',       emoji: '🚀', color: '#8C3494' },
+    { id: 'bank',   bn: 'ব্যাংক', en: 'Bank',   icon: 'landmark',          emoji: '🏦', color: '#32ADE6' }
   ];
 
   var WALLET_COLORS = ['#34C759', '#E2136E', '#EE7623', '#8C3494', '#32ADE6',
@@ -3700,11 +4094,11 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 
   /* payment methods */
   var METHODS = [
-    { id: 'cash',   bn: 'ক্যাশ',  en: 'Cash',   icon: 'cash',      emoji: '💵' },
-    { id: 'bkash',  bn: 'বিকাশ',  en: 'bKash',  icon: 'phone-pay', emoji: '📱' },
-    { id: 'nagad',  bn: 'নগদ',    en: 'Nagad',  icon: 'phone-pay', emoji: '📲' },
-    { id: 'rocket', bn: 'রকেট',   en: 'Rocket', icon: 'rocket',    emoji: '🚀' },
-    { id: 'bank',   bn: 'ব্যাংক', en: 'Bank',   icon: 'bank',      emoji: '🏦' }
+    { id: 'cash',   bn: 'ক্যাশ',  en: 'Cash',   icon: 'banknote',         emoji: '💵' },
+    { id: 'bkash',  bn: 'বিকাশ',  en: 'bKash',  icon: 'smartphone',       emoji: '📱' },
+    { id: 'nagad',  bn: 'নগদ',    en: 'Nagad',  icon: 'smartphone-arrow', emoji: '📲' },
+    { id: 'rocket', bn: 'রকেট',   en: 'Rocket', icon: 'send-rocket',      emoji: '🚀' },
+    { id: 'bank',   bn: 'ব্যাংক', en: 'Bank',   icon: 'landmark',         emoji: '🏦' }
   ];
 
   /*
@@ -3821,7 +4215,8 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       persistSupported: true,
       storageUsage: 0,
       storageQuota: 0,
-      version: 2
+      homeWalletsShow: true,      /* v2.2.0: show the wallet strip on Home */
+      version: 3
     };
   }
 
@@ -3905,6 +4300,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     if (!Array.isArray(st.people)) st.people = [];
     if (!Array.isArray(st.entries)) st.entries = [];
     if (!Array.isArray(st.wallets)) st.wallets = [];
+    if (!Array.isArray(st.customMethods)) st.customMethods = [];
     if (!Array.isArray(st.recurring)) st.recurring = [];
     if (!Array.isArray(st.products)) st.products = [];
     if (!Array.isArray(st.sales)) st.sales = [];
@@ -3913,17 +4309,100 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     if (!st.categories.some(function (c) { return c.id === 'other'; })) {
       st.categories.push(Object.assign({}, DEFAULT_CATEGORIES[9], { custom: false }));
     }
-    /* v4: make sure at least one wallet exists and every tx points at one.
-       Old transactions only carried a payment *method* — map it across so no
-       history is lost when the wallet feature appears. */
-    if (!st.wallets.length) st.wallets = DEFAULT_WALLETS.map(function (w) { return Object.assign({}, w, { custom: false }); });
-    var fallbackWallet = st.wallets[0] ? st.wallets[0].id : 'cash';
-    st.txs.forEach(function (tx) {
-      if (!tx.walletId) {
-        var match = st.wallets.filter(function (w) { return w.id === tx.method; })[0];
-        tx.walletId = match ? match.id : fallbackWallet;
+    /* ---- v2.2.0 · WALLET MODEL MIGRATION (nothing may be lost) ----------
+       Pre-v2.2 a wallet was a money container that mirrored a payment method.
+       From v2.2 a payment METHOD is only a label (no balance) and a WALLET is
+       a purpose-based pot of the user's own money. The migration therefore:
+         1. keeps every old wallet NAME as a payment method (customs included);
+         2. creates ONE 'মূল ওয়ালেট' and moves EVERY transaction onto it;
+         3. sums every old opening balance into it, so the total is unchanged;
+         4. keeps old wallet-to-wallet transfers as legacy internal records
+            (zero net effect) labelled 'পুরনো ওয়ালেট ট্রান্সফার';
+         5. verifies total balance / income / expense against the pre-migration
+            numbers and ABORTS (keeping the old data) if anything differs.
+       A v2.0 / v2.1 backup file importing through normalizeState takes this
+       exact same path. */
+    var isV22 = st.wallets.some(function (w) { return w && (w.type || w.main); });
+    if (!isV22) {
+      var preTotal = 0, preIn = 0, preEx = 0;
+      st.wallets.forEach(function (w) { preTotal += Number(w.opening) || 0; });
+      st.txs.forEach(function (tx) {
+        var a = Number(tx.amount) || 0;
+        if (tx.type === 'income') { preTotal += a; preIn += a; }
+        else { preTotal -= a; preEx += a; }
+      });
+
+      /* walk every old wallet that is not already a built-in method */
+      var builtIn = LEGACY_WALLETS.concat(METHODS);
+      st.wallets.forEach(function (w) {
+        if (!w || w.id === MAIN_WALLET_ID) return;
+        var known = builtIn.some(function (m) { return m.id === w.id; });
+        if (known) return;
+        /* a custom old wallet becomes a custom payment method with its name */
+        st.customMethods.push({
+          id: w.id, bn: w.bn || w.en || w.id, en: w.en || w.bn || w.id,
+          icon: (hasIcon(w.icon) ? w.icon : 'tag'), emoji: w.emoji || '',
+          color: w.color || '#8E8E93', custom: true
+        });
+      });
+
+      /* one main wallet holds all the money that used to sit in the old ones */
+      var mainOp = 0;
+      st.wallets.forEach(function (w) { mainOp += Number(w.opening) || 0; });
+      st.wallets = DEFAULT_WALLETS.map(function (w) { return Object.assign({}, w, { custom: false }); });
+      st.wallets[0].opening = mainOp;
+
+      /* every existing transaction moves onto the main wallet */
+      st.txs.forEach(function (tx) { tx.walletId = MAIN_WALLET_ID; });
+
+      /* old transfers stay as internal records, clearly labelled */
+      (st.transfers || []).forEach(function (tr) {
+        tr.legacy = true;
+        tr.note = tr.note || 'পুরনো ওয়ালেট ট্রান্সফার';
+        tr.fromWallet = MAIN_WALLET_ID;
+        tr.toWallet = MAIN_WALLET_ID;
+      });
+
+      /* ---- verification: the numbers must be identical, else abort ---- */
+      var postTotal = 0, postIn = 0, postEx = 0;
+      st.wallets.forEach(function (w) { postTotal += Number(w.opening) || 0; });
+      st.txs.forEach(function (tx) {
+        var a = Number(tx.amount) || 0;
+        if (tx.type === 'income') { postTotal += a; postIn += a; }
+        else { postTotal -= a; postEx += a; }
+      });
+      var same = Math.abs(postTotal - preTotal) < 0.01 &&
+                 Math.abs(postIn - preIn) < 0.01 &&
+                 Math.abs(postEx - preEx) < 0.01;
+      if (!same) {
+        /* abort: keep the caller's original state rather than risk data */
+        warnOnce('wallet-migrate-abort', 'ওয়ালেট মাইগ্রেশন বাতিল — হিসাব মেলেনি');
+        return null;
       }
+      st.__walletMigrated = true;
+    } else {
+      /* already on the v2.2 model — just make sure every tx points at a real
+         wallet and that exactly one main wallet exists */
+      var ids = st.wallets.map(function (w) { return w.id; });
+      if (ids.indexOf(MAIN_WALLET_ID) === -1) {
+        st.wallets.unshift(Object.assign({}, DEFAULT_WALLETS[0], { custom: false }));
+      }
+      st.wallets.forEach(function (w, i) { w.main = (w.id === MAIN_WALLET_ID); });
+      st.txs.forEach(function (tx) {
+        if (!tx.walletId || st.wallets.every(function (w) { return w.id !== tx.walletId; })) {
+          tx.walletId = MAIN_WALLET_ID;
+        }
+      });
+    }
+
+    /* v2.2.0 · write the resolved icon key permanently into every category,
+       so the UI never has to fall back to the legacy emoji again. The emoji
+       field itself is left untouched: old backup files still import. */
+    st.categories.forEach(function (c) {
+      if (!c) return;
+      if (!hasIcon(c.icon)) c.icon = catIcon(c);
     });
+    if (!isV22 && !st.__walletMigrated) return null;
     return st;
   }
 
@@ -4177,9 +4656,12 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   }
   function catName(c) { return (S.settings.lang === 'en' && c.en) ? c.en : (c.bn || c.en); }
   function methodById(id) {
-    for (var i = 0; i < METHODS.length; i++) if (METHODS[i].id === id) return METHODS[i];
-    return METHODS[0];
+    var all = methods();
+    for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+    return all[0];
   }
+  /** every payment method = the 5 built-ins + any the migration created */
+  function methods() { return METHODS.concat((S && S.customMethods) || []); }
   function methodName(m) { return (S.settings.lang === 'en' && m.en) ? m.en : m.bn; }
   function personById(id) {
     for (var i = 0; i < S.people.length; i++) if (S.people[i].id === id) return S.people[i];
@@ -4487,6 +4969,29 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
    * Bengali first, English second, newest release on top.
    */
   var CHANGELOG = [
+    { v: '2.2.2', d: '৯ অক্টোবর ২০২৬', items: [
+      'মাসিক সারাংশের রিং ও লেজেন্ড আর একটার উপর আরেকটা পড়বে না — শতাংশ লেবেল এখন রিংয়ের ভিতরেই থাকে, স্ক্রিনের কোনায় যায় না (৩২০ / ৩৬০ / ৪১২px এ পরীক্ষিত)',
+      'লেজেন্ডের লেবেল ও টাকার পরিমাণ এখন স্বাক্ষরভাবে সাজানো — সংখ্যা ডানে সারিবদ্ধ, বড় অংকও কাটে যায় না',
+      'হোমের ওয়ালেট আবার বড় কার্ড ক্যারোসেলে — প্রথম কার্ড 16px মার্জিনে, পরের কার্ডের একটু ঝলক',
+      '“মোট ব্যালেন্স” কার্ড হোমে এখন মাত্র একটিই — আয়/খরচ তার ভিতরেই দেখা যায়',
+      'ওয়ালেটের প্রতিটি টাকামানের আগে এখন য় চিহ্ন দেখা যায়'
+    ] },
+    { v: '2.2.1', d: '৯ অক্টোবর ২০২৬', items: [
+      'রিকারিং এন্ট্রির নিয়ম কার্ডে আর কাঁচা SVG কোড দেখা যায় না — আইকন এখন ঠিকভাবে আঁকা হয়',
+      'রিকারিং এন্ট্রির পুনরাবৃত্তি লেবেল (প্রতিদিন / সাপ্তাহিক / মাসিক / বার্ষিক) এখন বাংলা ও ইংরেজিতে দেখা যায়',
+      '৩২০px চওড়া ফোনে প্রগ্রেস রিং ও লেজেন্ড আর একটার উপর আরেকটা পড়ে না — ছোট স্ক্রিনে সাজানো হয়',
+      'হোমের ওয়ালেট পিলে এখন ওয়ালেটের নাম ও টাকার পরিমাণ দুটোই দেখা যায়',
+      'বাকির ব্যক্তির পর্দায় ডিলিট বাটন এখন সবসময় দেখা যায় ও চাপা যায়',
+      'সংখ্যা লেখার ঘরে বাংলা সংখ্যা এখন সেটিং অনুযায়ী দেখা যায় (১২৩ / 123)'
+    ] },
+    { v: '2.2.0', d: '৯ অক্টোবর ২০২৬', items: [
+      'সেটিংসের খালি আইকন ঠিক করা হয়েছে — বাংলা সংখ্যা, উৎসব, দোকান মোড, রিকারিং, বাকির বার্তা, পিন লকের আইকন এখন দেখা যায়',
+      'নতুন ওয়ালেট সিস্টেম — পেমেন্ট মাধ্যম (ব্যালেন্স নেই, শুধু লেবেল) ও ওয়ালেট (নিজের টাকার ভাগ) এখন আলাদা',
+      'ওয়ালেটে টাইপ, লক্ষ্যমাত্রা, মাসিক লিমিট ও মাসিক অটো-সঞ্চয় যোগ করা হয়েছে; বাজেট ওয়ালেটে ৮০% ও ১০০% সতর্কতা',
+      '“টাকা সরান” — ওয়ালেটের মধ্যে টাকা সরানো, আয় বা খরচের হিসাব একটুও বদলায় না',
+      'হোম স্ক্রিন আরও কমপ্যাক্ট — একটাই মোট ব্যালেন্স কার্ড ও ছোট ওয়ালেট পিল সারি',
+      'সব ইমোজি সরিয়ে সম্পূর্ণ SVG আইকন; আইকন স্প্রাইটের সিঙ্ক ভ্যালিডেটর যোগ করা হয়েছে'
+    ] },
     { v: '2.1.0', d: '৯ অক্টোবর ২০২৬', items: [
       'নতুন “ডেভেলপার” সেকশন — ডেভেলপার কার্ড, টেলিগ্রাম যোগাযোগ, ফিডব্যাক ও শেয়ার',
       'সব ইমোজির বদলে প্রিমিয়াম SVG আইকন — ট্যাব, ক্যাটাগরি, ওয়ালেট, খালি অবস্থা, টোস্ট সব জায়গায়',
@@ -4974,7 +5479,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   /** savings-rate ring with a gradient stroke and a soft glow */
   function drawWidgetRing(cv, ratio, color) {
     if (!cv) return;
-    var size = 104;
+    var size = 112;
     var ctx = sizeCanvas(cv, size, size);
     var cx = size / 2, cy = size / 2, th = 11;
     var r = size / 2 - th / 2 - 2;
@@ -4991,16 +5496,16 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       var g = ctx.createLinearGradient(0, 0, size, size);
       g.addColorStop(0, color);
       g.addColorStop(1, dark ? '#A5A3FF' : '#8B89FF');
-      ctx.save();
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 12;
       ctx.beginPath();
       ctx.lineCap = 'round';
       ctx.lineWidth = th;
       ctx.strokeStyle = g;
-      ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac);
+      /* v2.2.2 — the −90° rotation now lives in CSS (.ring > canvas),
+         so the arc starts at 12 o'clock with NO manual angle offset. The old
+         version baked the rotation into the arc maths AND overrode the
+         wrapper size, which is what pushed the label off the ring. */
+      ctx.arc(cx, cy, r, 0, Math.PI * 2 * frac);
       ctx.stroke();
-      ctx.restore();
     });
   }
 
@@ -5143,7 +5648,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     });
     return Object.keys(map).map(function (id) {
       var c = catById(id);
-      return { id: id, label: catName(c), emoji: c.emoji, color: c.color, value: map[id] };
+      return { id: id, label: catName(c), icon: catIcon(c), color: c.color, value: map[id] };
     }).sort(function (a, b) { return b.value - a.value; });
   }
 
@@ -5169,7 +5674,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   /** the icon bubble used in transaction rows */
   function bubbleHTML(cat, sizeClass) {
     return '<span class="icon-bubble ' + (sizeClass || '') + '" style="--tint:' + cat.color + '22;">' +
-      '<span aria-hidden="true">' + cat.emoji + '</span></span>';
+      icon(catIcon(cat)) + '</span>';
   }
 
   /** one transaction row (inside its swipe wrapper) */
@@ -5252,12 +5757,9 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   var WG_CHEV_R = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6 15 12l-5.5 6"/></svg>';
   var WG_FLIP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9a8 8 0 0 1 13.5-3.5L20 8"/><path d="M20 4v4h-4"/><path d="M20 15a8 8 0 0 1-13.5 3.5L4 16"/><path d="M4 20v-4h4"/></svg>';
 
-  /** one labelled stat line inside the widget */
-  function wgStat(dotColor, label, valueHTML) {
-    return '<div class="wg-stat"><span class="s-dot" style="background:' + dotColor + '"></span>' +
-      '<span class="s-lab">' + esc(label) + '</span>' +
-      '<span class="s-val">' + valueHTML + '</span></div>';
-  }
+  /* the three labelled stat lines are now built inline inside .sum-legend —
+     the old wgStat() helper described the removed .wg-stats layout, so it
+     was dropped in v2.2.2 rather than left as dead code. */
 
   /**
    * The Monthly Summary glass widget.
@@ -5285,15 +5787,29 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
           '<button type="button" data-act="wg-next"' + (canNext ? '' : ' disabled') + ' aria-label="' + esc(t('wg_next')) + '">' + WG_CHEV_R + '</button>' +
         '</div>' +
       '</div>' +
-      '<div class="wg-body">' +
-        '<div class="wg-ring"><canvas id="wgRing" role="img" aria-label="' + esc(t('wg_rate')) + '"></canvas>' +
-          '<div class="wg-ring-c"><div><div class="r-pct" id="wgRate" style="color:' + rateColor + '">' + pct(rate * 100) + '</div>' +
-          '<div class="r-lab">' + esc(t('wg_rate')) + '</div></div></div>' +
+      /* v2.2.2 — rebuilt as an explicit 2-column grid (.sum-grid). The ring
+         wrapper is the positioning context, the canvas fills it and is
+         rotated in CSS, and the label is a SEPARATE layer inside the wrapper.
+         The legend is dot / label / right-aligned amount so nothing can
+         overlap at 320px. */
+      '<div class="sum-grid">' +
+        '<div class="ring">' +
+          '<canvas id="wgRing" role="img" aria-label="' + esc(t('wg_rate')) + '"></canvas>' +
+          '<div class="ring-label">' +
+            '<div class="r-pct" id="wgRate" style="color:' + rateColor + '">' + pct(rate * 100) + '</div>' +
+            '<div class="r-lab">' + esc(t('wg_rate')) + '</div>' +
+          '</div>' +
         '</div>' +
-        '<div class="wg-stats">' +
-          wgStat('var(--income)', t('income'), '<span id="wgIn">' + money(d.income) + '</span>') +
-          wgStat('var(--expense)', t('expense'), '<span id="wgEx">' + money(d.expense) + '</span>') +
-          wgStat('var(--accent)', t('wg_saving'), '<span id="wgNet" style="color:' + (d.net >= 0 ? 'var(--income)' : 'var(--expense)') + '">' + money(d.net) + '</span>') +
+        '<div class="sum-legend">' +
+          '<div class="sum-row"><span class="sd" style="background:var(--income)"></span>' +
+            '<span class="sl">' + esc(t('income')) + '</span>' +
+            '<span class="sv" id="wgIn">' + money(d.income) + '</span></div>' +
+          '<div class="sum-row"><span class="sd" style="background:var(--expense)"></span>' +
+            '<span class="sl">' + esc(t('expense')) + '</span>' +
+            '<span class="sv" id="wgEx">' + money(d.expense) + '</span></div>' +
+          '<div class="sum-row"><span class="sd" style="background:var(--accent)"></span>' +
+            '<span class="sl">' + esc(t('wg_saving')) + '</span>' +
+            '<span class="sv' + (d.net >= 0 ? '' : ' neg') + '" id="wgNet">' + money(d.net) + '</span></div>' +
         '</div>' +
       '</div>' +
       '<div class="wg-spark"><canvas id="wgSpark" role="img" aria-label="' + esc(t('last30')) + '"></canvas></div>' +
@@ -5311,7 +5827,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       var maxV = d.byCat[0].value || 1;
       html += '<div class="wg-cats">' + d.byCat.map(function (c) {
         return '<div class="wg-cat">' +
-          '<div class="wg-cat-top"><span>' + c.emoji + '</span>' +
+          '<div class="wg-cat-top"><span class="wg-cat-ic">' + icon(c.icon) + '</span>' +
             '<span class="c-lab">' + esc(c.label) + '</span>' +
             '<span class="c-val">' + money(c.value) + '</span></div>' +
           '<span class="wg-cat-track"><span class="wg-cat-fill" data-w="' + ((c.value / maxV) * 100) + '" style="background:' + c.color + '"></span></span>' +
@@ -5423,30 +5939,25 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 
     var html = widgetHTML();
 
-    /* ---------- v4 · wallet balances carousel ---------- */
-    html += '<div class="sec-head"><span class="sec-title">' + esc(t('wallet_balances')) + '</span>' +
-      '<button class="wpill" type="button" data-act="open-transfer">' + icon('swap') + ' ' + esc(t('wallet_transfer')) + '</button></div>';
-    html += walletsHTML();
-    /* the carousel + hero are painted now — wire the dots and the count-up */
+    /* ---------- v2.2.0 · v2.2.2: ONE compact balance hero + the wallet
+       CARD carousel. The slide-in pills were reverted to the larger gradient
+       cards; the hero above is the single মোট ব্যালেন্স card on Home, and the income /
+       expense chips live inside it. ---------- */
+    html += walletHeroHTML();
+    if (S.settings.homeWalletsShow !== false) {
+      html += '<div class="sec-head"><span class="sec-title">' + esc(t('wallets')) + '</span>' +
+        '<button class="wpill" type="button" data-act="open-transfer">' + icon('swap') + ' ' + esc(t('wallet_transfer')) + '</button></div>';
+      html += walletsHTML();
+    }
+    /* paint the carousel dots + the hero count-up once the DOM exists */
     setTimeout(function () { bindWalletDots(); countUpWalletHero(); }, 0);
 
     /* ---------- v4 · backup reminder (configurable, hides when fresh) ---------- */
     html += backupBannerHTML();
 
-    /* ---------- hero (parallax tilt target) ---------- */
-    html += '<div class="card hero" id="heroCard">' +
-      '<div class="hero-label">' + esc(t('total_balance')) + '</div>' +
-      '<div class="hero-amount"><span class="cur">' + esc(S.settings.currency) + '</span>' +
-        '<span id="heroAmount">' + money(bal, { sym: false }) + '</span></div>' +
-      '<div class="hero-chips">' +
-        '<div class="chip-stat"><span class="dot in"></span><div class="grow">' +
-          '<div class="c-lab">' + esc(t('this_month_in')) + '</div>' +
-          '<div class="c-val" style="color:var(--income)">' + money(ms.income) + '</div></div></div>' +
-        '<div class="chip-stat"><span class="dot ex"></span><div class="grow">' +
-          '<div class="c-lab">' + esc(t('this_month_ex')) + '</div>' +
-          '<div class="c-val" style="color:var(--expense)">' + money(ms.expense) + '</div></div></div>' +
-      '</div>' +
-    '</div>';
+    /* ---------- v2.2.0: the duplicate 'মোট ব্যালেন্স' card is gone.
+       The single hero is rendered by walletHeroHTML() above, keeping the
+       Home page compact (~170px) instead of showing the total twice. -------- */
 
     /* ---------- quick actions ---------- */
     html += '<div class="quick">' +
@@ -5487,7 +5998,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       html += '<div class="legend">' + byCat.slice(0, 6).map(function (s) {
         var p = monthExpense ? (s.value / monthExpense) * 100 : 0;
         return '<div class="legend-row"><span class="sw" style="background:' + s.color + '"></span>' +
-          '<span class="lg-lab">' + esc(s.emoji + ' ' + s.label) + '</span>' +
+          '<span class="lg-lab">' + icon(s.icon, 'ic-sm') + ' ' + esc(s.label) + '</span>' +
           '<span class="lg-pct">' + pct(p) + '</span>' +
           '<span class="lg-val">' + money(s.value) + '</span></div>';
       }).join('') + '</div>';
@@ -5593,8 +6104,8 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       '<button class="chip' + (f.type === 'income' ? ' on' : '') + '" type="button" data-act="tx-type" data-v="income">' + esc(t('income')) + '</button>' +
       '<button class="chip' + (f.type === 'expense' ? ' on' : '') + '" type="button" data-act="tx-type" data-v="expense">' + esc(t('expense')) + '</button>' +
       '<span style="flex:0 0 6px"></span>';
-    METHODS.forEach(function (m) {
-      html += '<button class="chip' + (f.method === m.id ? ' on' : '') + '" type="button" data-act="tx-method" data-v="' + m.id + '">' + esc(m.emoji + ' ' + methodName(m)) + '</button>';
+    methods().forEach(function (m) {
+      html += '<button class="chip' + (f.method === m.id ? ' on' : '') + '" type="button" data-act="tx-method" data-v="' + m.id + '">' + icon(methodIcon(m), 'ic-sm') + ' ' + esc(methodName(m)) + '</button>';
     });
     html += '</div>';
 
@@ -5602,7 +6113,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     html += '<div class="chips mt8">' +
       '<button class="chip' + (f.cat === 'all' ? ' on' : '') + '" type="button" data-act="tx-cat" data-v="all">' + esc(t('filter_cat')) + ': ' + esc(t('all')) + '</button>' +
       S.categories.map(function (c) {
-        return '<button class="chip' + (f.cat === c.id ? ' on' : '') + '" type="button" data-act="tx-cat" data-v="' + c.id + '">' + esc(c.emoji + ' ' + catName(c)) + '</button>';
+        return '<button class="chip' + (f.cat === c.id ? ' on' : '') + '" type="button" data-act="tx-cat" data-v="' + c.id + '">' + icon(catIcon(c), 'ic-sm') + ' ' + esc(catName(c)) + '</button>';
       }).join('') + '</div>';
 
     /* summary strip */
@@ -5836,7 +6347,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       var cat = d.categoryId ? catById(d.categoryId) : null;
       var col = d.type === 'income' ? 'var(--income)' : 'var(--expense)';
       hint.innerHTML = '<span style="color:' + col + '">' + esc(t(d.type)) + '</span>' +
-        (cat ? ' <span class="sep" style="opacity:.5">·</span> ' + esc(cat.emoji + ' ' + catName(cat)) : '');
+        (cat ? ' <span class="sep" style="opacity:.5">·</span> ' + icon(catIcon(cat), 'ic-sm') + ' ' + esc(catName(cat)) : '');
     }
 
     /* keypad labels follow the digit setting */
@@ -5854,7 +6365,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       grid.innerHTML = list.map(function (c) {
         return '<button class="cat-cell' + (c.id === d.categoryId ? ' on' : '') + '" type="button" ' +
           'data-act="pick-cat" data-id="' + c.id + '" style="--ctint:' + c.color + '26;--ccol:' + c.color + '">' +
-          '<span class="ce" aria-hidden="true">' + c.emoji + '</span>' +
+          '<span class="ce" aria-hidden="true">' + icon(catIcon(c)) + '</span>' +
           '<span class="cn">' + esc(catName(c)) + '</span></button>';
       }).join('');
     }
@@ -5866,8 +6377,8 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     /* method chips */
     var mHost = $('#txMethodChips');
     if (mHost) {
-      mHost.innerHTML = METHODS.map(function (m) {
-        return '<button class="chip' + (m.id === d.method ? ' on' : '') + '" type="button" data-act="pick-method" data-id="' + m.id + '">' + esc(m.emoji + ' ' + methodName(m)) + '</button>';
+      mHost.innerHTML = methods().map(function (m) {
+        return '<button class="chip' + (m.id === d.method ? ' on' : '') + '" type="button" data-act="pick-method" data-id="' + m.id + '">' + icon(methodIcon(m), 'ic-sm') + ' ' + esc(methodName(m)) + '</button>';
       }).join('');
     }
 
@@ -5875,8 +6386,10 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     var wHost = $('#txWalletChips');
     if (wHost) {
       wHost.innerHTML = S.wallets.map(function (w) {
+        var wb = walletBalance(w.id);
         return '<button class="chip' + (w.id === d.walletId ? ' on' : '') + '" type="button" data-act="tx-wallet" data-v="' + w.id + '">' +
-          esc(w.emoji + ' ' + walletName(w)) + '</button>';
+          icon(walletIcon(w), 'ic-sm') + ' ' + esc(walletName(w)) +
+          ' <b style="font-weight:700;opacity:.72;font-variant-numeric:tabular-nums">' + money(wb, { sym: false }) + '</b></button>';
       }).join('');
     }
 
@@ -5963,7 +6476,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
         categoryId: d.categoryId,
         date: d.date,
         method: d.method,
-        walletId: d.walletId || d.method || 'cash',
+        walletId: d.walletId || MAIN_WALLET_ID,
         noteBn: d.note,
         noteEn: '',
         createdAt: Date.now()
@@ -5978,7 +6491,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
         id: uid('rc'), title: d.note || catName(catById(d.categoryId)),
         type: d.type, amount: Math.round(amt * 100) / 100,
         freq: d.repFreq, interval: 1, start: d.date, end: null,
-        categoryId: d.categoryId, walletId: d.walletId || d.method || 'cash',
+        categoryId: d.categoryId, walletId: d.walletId || MAIN_WALLET_ID,
         paused: false, lastRun: d.date, createdAt: Date.now()
       });
       toast(t('recur_added'));
@@ -6141,7 +6654,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       '</div>' +
       '<div class="field" style="margin-bottom:10px;">' +
         '<label for="entryAmount">' + esc(t('amount')) + ' (' + esc(S.settings.currency) + ')</label>' +
-        '<input class="input" type="number" inputmode="decimal" min="0" step="any" id="entryAmount" value="' + esc(d.amount) + '" placeholder="0" />' +
+        '<input class="input" type="text" inputmode="decimal" autocomplete="off" id="entryAmount" value="' + esc(num(d.amount)) + '" placeholder="0" />' +
       '</div>' +
       '<div class="field" style="margin-bottom:10px;">' +
         '<label for="entryDate">' + esc(t('date')) + '</label>' +
@@ -6161,7 +6674,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       html += '<div class="list" style="padding-bottom:12px;">' + entries.map(function (e) {
         var gave = e.dir === 'gave';
         return '<div class="entry-row">' +
-          '<span class="e-badge ' + (gave ? 'gave' : 'got') + '" aria-hidden="true">' + (gave ? '↗' : '↙') + '</span>' +
+          '<span class="e-badge ' + (gave ? 'gave' : 'got') + '" aria-hidden="true">' + icon(gave ? 'arrow-up-right' : 'arrow-down-left') + '</span>' +
           '<span class="grow" style="min-width:0;">' +
             '<span class="tx-name">' + esc(gave ? t('i_gave') : t('i_got')) + '</span>' +
             '<span class="tx-sub">' + esc(shortDate(e.date)) + (entryNote(e) ? ' <span class="sep">·</span> ' + esc(entryNote(e)) : '') + '</span>' +
@@ -6176,7 +6689,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 
     /* delete person */
     html += '<button class="btn btn-danger btn-block" type="button" data-act="del-person" data-id="' + p.id + '" style="margin:16px 0 8px;">' +
-      esc(t('person_deleted')) + '?</button>';
+      icon('trash') + ' ' + esc(t('delete')) + '</button>';
 
     body.innerHTML = html;
     var seg = $('#entrySeg');
@@ -6293,7 +6806,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       html += '<div class="card">' + byCat.map(function (c) {
         var share = s.expense ? (c.value / s.expense) * 100 : 0;
         return '<div class="bar-row">' +
-          '<span class="bar-lab">' + esc(c.emoji + ' ' + c.label) + '</span>' +
+          '<span class="bar-lab">' + icon(c.icon, 'ic-sm') + ' ' + esc(c.label) + '</span>' +
           '<span class="bar-track"><span class="bar-fill" style="background:' + c.color + ';width:' + ((c.value / maxVal) * 100) + '%"></span></span>' +
           '<span class="bar-val">' + money(c.value) + '<br><span style="font-size:10.5px;color:var(--text-3);font-weight:600">' + pct(share) + '</span></span>' +
         '</div>';
@@ -6357,7 +6870,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
         var r = lim ? spent / lim : 0;
         var col = r >= 1 ? 'var(--expense)' : (r >= 0.8 ? 'var(--warn)' : c.color);
         return '<div class="budget-row">' +
-          '<span class="b-lab">' + esc(c.emoji + ' ' + catName(c)) + '</span>' +
+          '<span class="b-lab">' + icon(catIcon(c), 'ic-sm') + ' ' + esc(catName(c)) + '</span>' +
           '<span class="b-mid"><span class="bar-track"><span class="bar-fill" style="background:' + col + ';width:' + clamp(r * 100, 0, 100) + '%"></span></span>' +
           '<span class="b-num">' + money(spent) + ' / ' + money(lim) + '</span></span>' +
           '<span style="font-size:12.5px;font-weight:700;color:' + col + ';min-width:42px;text-align:right">' + pct(r * 100) + '</span>' +
@@ -6408,7 +6921,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   /** one settings row with a switch on the right */
   function switchRow(act, icon, label, sub, isOn) {
     return '<button class="set-item" type="button" data-act="' + act + '" style="width:100%;text-align:left">' +
-      '<span class="si-ic">' + icon + '</span>' +
+      siIcon(icon) +
       '<span class="si-t"><span class="si-l">' + esc(label) + '</span>' +
       (sub ? '<span class="si-s">' + esc(sub) + '</span>' : '') + '</span>' +
       '<span class="switch' + (isOn ? ' on' : '') + '" aria-hidden="true"></span>' +
@@ -6445,6 +6958,8 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       '<button type="button" data-lang="bn"' + (st.lang === 'bn' ? ' class="on"' : '') + '>' + esc(t('lang_bn')) + '</button>' +
       '<button type="button" data-lang="en"' + (st.lang === 'en' ? ' class="on"' : '') + '>' + esc(t('lang_en')) + '</button>' +
     '</div></div>';
+
+    html += switchRow('home-wallets', 'wallet', t('wallets'), walletNote(), S.settings.homeWalletsShow !== false);
 
     html += switchRow('toggle-digits', 'digits', t('bn_digits'), t('bn_digits_sub'), st.banglaDigits);
 
@@ -6500,7 +7015,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     if (UI.catManage) {
       html += S.categories.map(function (c) {
         return '<div class="set-item">' +
-          '<span class="si-ic" style="background:' + c.color + '22;color:' + c.color + ';font-size:17px;">' + c.emoji + '</span>' +
+          icTile(catIcon(c), c.color) +
           '<span class="si-t"><span class="si-l">' + esc(catName(c)) + '</span>' +
           '<span class="si-s">' + esc(c.kind === 'expense' ? t('kind_expense') : (c.kind === 'income' ? t('kind_income') : t('kind_both'))) + '</span></span>' +
           (c.custom
@@ -6724,9 +7239,9 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     body.innerHTML = cats.map(function (c) {
       var v = S.budgets[c.id] || 0;
       return '<div class="row" style="gap:12px;padding:9px 0;border-bottom:1px solid var(--line);">' +
-        '<span class="si-ic" style="width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:' + c.color + '22;color:' + c.color + ';font-size:17px;">' + c.emoji + '</span>' +
+        icTile(catIcon(c), c.color) +
         '<span class="grow" style="font-size:14px;font-weight:600">' + esc(catName(c)) + '</span>' +
-        '<input class="input" type="number" inputmode="numeric" min="0" step="100" data-budget="' + c.id + '" value="' + (v ? v : '') + '" placeholder="0" style="width:120px;min-height:44px;text-align:right;padding:8px 12px;" />' +
+        '<input class="input" type="text" inputmode="numeric" autocomplete="off" data-budget="' + c.id + '" value="' + (v ? esc(num(v)) : '') + '" placeholder="0" style="width:120px;min-height:44px;text-align:right;padding:8px 12px;" />' +
       '</div>';
     }).join('');
     openSheet('sheetBudget');
@@ -6940,8 +7455,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     } else if (act === 'wg-next') {
       haptic('light');
       widgetGoMonth(1);
-    } else if (act === 'toggle-celebrate') {
-      S.settings.celebrate = S.settings.celebrate === false;
+    } else if (act === 'toggle-celebrate') {      S.settings.celebrate = S.settings.celebrate === false;
       save();
       haptic('light');
       renderSettings();
@@ -6951,6 +7465,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 
     /* --- v4 · wallets + transfers --- */
     else if (act === 'open-wallet') { openWalletDetail(el.getAttribute('data-id')); }
+    else if (act === 'open-wallets') { openWalletsScreen(); }
     else if (act === 'wallet-edit') { closeSheet('sheetWalletDetail'); openWalletSheet(el.getAttribute('data-id')); }
     else if (act === 'new-wallet') { openWalletSheet(null); }
     else if (act === 'pick-wallet-icon') { _walletDraft.icon = el.getAttribute('data-v'); paintWalletSheet(); }
@@ -7148,8 +7663,17 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     else if (act === 'pdf-report') { printReportPaper(); }
     else if (act === 'edit-budget') { openBudgetSheet(); }
 
+    /* --- v2.2.0 · wallets (= money pots), separate from payment methods --- */
+    else if (act === 'open-wallets') { openWalletsScreen(); }
+    else if (act === 'pick-wallet-type') { _walletDraft.type = el.getAttribute('data-v'); paintWalletSheet(); }
+    else if (act === 'pick-wallet-leftover') { _walletDraft.leftover = el.getAttribute('data-v'); paintWalletSheet(); }
+
     /* --- settings --- */
-    else if (act === 'toggle-digits') {
+    else if (act === 'home-wallets') {
+      S.settings.homeWalletsShow = !(S.settings.homeWalletsShow !== false);
+      save(); haptic('light');
+      renderSettings();
+    } else if (act === 'toggle-digits') {
       S.settings.banglaDigits = !S.settings.banglaDigits;
       save();
       localizeDigits();
@@ -7265,6 +7789,19 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   /* live search + sheet inputs */
   document.addEventListener('input', function (e) {
     var tgt = e.target;
+    /* v2.2.1 · numeric fields follow the Bangla-digits setting: typed ASCII
+       digits become Bangla (and vice-versa) so the field always shows the
+       chosen numeral style. parseAmount() accepts both forms. */
+    if (tgt && tgt.classList && tgt.classList.contains('input') &&
+        (tgt.getAttribute('inputmode') === 'decimal' || tgt.getAttribute('inputmode') === 'numeric')) {
+      var raw = tgt.value;
+      var conv = S.settings.banglaDigits ? toBn(raw) : fromBn(raw);
+      if (conv !== raw) {
+        var caret = tgt.selectionStart;
+        tgt.value = conv;
+        try { tgt.setSelectionRange(caret, caret); } catch (err) {}
+      }
+    }
     if (tgt.id === 'txSearch') {
       UI.txFilter.q = tgt.value;
       UI.txSearchFocus = true;
@@ -7473,12 +8010,76 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       if (pct < 0.6) return '';
       return '<i style="width:' + pct.toFixed(2) + '%;background:' + esc(p.w.color || '#5E5CE6') + '"></i>';
     }).join('');
+    /* the month's income + expense sit in ONE row inside the same hero, so the
+       Home page needs a single balance card instead of two stacked ones. */
+    var m = sumOf(monthTxs());
     return '<div class="whero">' +
       '<div class="wh-lab">' + esc(t('total_balance')) + '</div>' +
       '<div class="wh-amt"><span class="wh-cur">' + esc(S.settings.currency) + '</span>' +
         '<span class="wh-num' + (total < 0 ? ' neg' : '') + '" id="wheroNum">' + money(total, { sym: false }) + '</span></div>' +
-      '<div class="wseg">' + segs + '</div>' +
+      '<div class="wh-row">' +
+        '<span class="wh-chip"><span class="dot in"></span>' + esc(t('this_month_in')) +
+          ' <b style="color:var(--income)">' + money(m.income) + '</b></span>' +
+        '<span class="wh-chip"><span class="dot ex"></span>' + esc(t('this_month_ex')) +
+          ' <b style="color:var(--expense)">' + money(m.expense) + '</b></span>' +
+      '</div>' +
+      '<div class="wseg" aria-hidden="true">' + segs + '</div>' +
     '</div>';
+  }
+
+  /**
+   * v2.2.0 · the compact wallet strip on Home — at most 5 slim pills so the
+   * whole wallet block stays under ~130px on a 360x800 phone.
+   */
+  function walletStripHTML() {
+    if (!S.wallets.length) return '';
+    var pills = S.wallets.slice(0, 5).map(function (w) {
+      var bal = walletBalance(w.id);
+      var p = walletProgress(w, bal);
+      var bar = p ? '<span class="wpill2-bar"><i style="width:' + clamp(p.pct * 100, 0, 100) + '%;background:' + p.color + '"></i></span>' : '';
+      return '<button class="wpill2' + (bal < 0 ? ' neg' : '') + '" type="button" data-act="open-wallet" data-id="' + w.id + '">' +
+        '<span class="wpill2-ic" style="background:' + (w.color || '#5E5CE6') + '2E;color:' + (w.color || '#5E5CE6') + '">' + icon(walletIcon(w)) + '</span>' +
+        '<span class="wpill2-t">' + esc(walletName(w)) + '</span>' +
+        '<span class="wpill2-v"><span class="wpill2-cur">' + esc(S.settings.currency) + '</span>' + money(bal, { sym: false }) + '</span>' + bar +
+      '</button>';
+    }).join('');
+    var more = S.wallets.length > 5
+      ? '<button class="wpill2 more" type="button" data-act="open-wallets">' +
+        '<span class="wpill2-ic">' + icon('layers') + '</span><span class="wpill2-t">' + esc(t('all_wallets')) + '</span></button>'
+      : '';
+    /* 4px flex spacers at both ends — some engines ignore a scroll
+       container's right padding, so the last pill could not be scrolled fully
+       into view without them. */
+    var sp = '<i class="wstrip-sp" aria-hidden="true"></i>';
+    return '<div class="sec-head"><span class="sec-title">' + esc(t('wallets')) + '</span>' +
+      '<button class="sec-link" type="button" data-act="open-wallets">' + esc(t('see_all')) + '</button></div>' +
+      '<div class="wstrip">' + sp + pills + more + sp + '</div>';
+  }
+
+  /** progress of a goal / budget wallet, or null when it has no target */
+  function walletProgress(w, bal) {
+    if (!w) return null;
+    if (w.type === 'budget' && Number(w.monthlyLimit) > 0) {
+      var r = monthSpentFromWallet(w.id) / Number(w.monthlyLimit);
+      return { pct: r, color: r >= 1 ? '#FF453A' : (r >= 0.8 ? '#FF9500' : '#32ADE6'), kind: 'budget' };
+    }
+    if (Number(w.goal) > 0) {
+      var r2 = Math.max(0, bal) / Number(w.goal);
+      return { pct: r2, color: r2 >= 1 ? '#34C759' : (w.color || '#34C759'), kind: 'goal' };
+    }
+    return null;
+  }
+
+  /** how much was spent FROM this wallet in the current month */
+  function monthSpentFromWallet(id) {
+    var pre = todayIso().slice(0, 7);
+    var sum = 0;
+    S.txs.forEach(function (tx) {
+      if (tx.walletId !== id || tx.type !== 'expense') return;
+      if (String(tx.date).slice(0, 7) !== pre) return;
+      sum += Number(tx.amount) || 0;
+    });
+    return sum;
   }
 
   function walletsHTML() {
@@ -7503,8 +8104,9 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     var dots = S.wallets.map(function (w, i) {
       return '<i' + (i === 0 ? ' class="on"' : '') + '></i>';
     }).join('');
-    return walletHeroHTML() +
-      '<div class="wcar" id="wcar">' + cards + '</div>' +
+    /* v2.2.2 — the hero is rendered ONCE per Home load (by the caller), so
+       this no longer prepends a second মোট ব্যালেন্স card. */
+    return '<div class="wcar" id="wcar">' + cards + '</div>' +
       '<div class="wdots" id="wdots">' + dots + '</div>';
   }
 
@@ -7557,6 +8159,143 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   }
 
   /* ---- wallet detail sheet (tap a card) ---- */
+  /* ======================================================================
+     3.10c  v2.2.0 · WALLETS SCREEN + AUTO-SAVE (টাকা সরান)
+     ====================================================================== */
+  /**
+   * The full wallets screen: 2-column cards with progress rings for goal and
+   * budget wallets, an "add wallet" tile, and the edit / move-money actions.
+   */
+  function openWalletsScreen() {
+    var body = document.getElementById('walletDetailBody');
+    if (!body) return;
+    var total = 0;
+    S.wallets.forEach(function (w) { total += walletBalance(w.id); });
+
+    var h = '<div class="whero">' +
+      '<div class="wh-lab">' + esc(t('total_balance')) + '</div>' +
+      '<div class="wh-amt"><span class="wh-cur">' + esc(S.settings.currency) + '</span>' +
+        '<span class="wh-num' + (total < 0 ? ' neg' : '') + '">' + money(total, { sym: false }) + '</span></div>' +
+    '</div>';
+
+    h += '<div class="pill-row">' +
+      '<button class="pill accent" type="button" data-act="new-wallet">' + icon('plus') + ' ' + esc(t('wallet_new')) + '</button>' +
+      '<button class="pill" type="button" data-act="open-transfer">' + icon('swap') + ' ' + esc(t('move_money')) + '</button>' +
+    '</div>';
+
+    h += '<div class="wgrid">' + S.wallets.map(function (w) {
+      var bal = walletBalance(w.id);
+      var p = walletProgress(w, bal);
+      var ring = '';
+      if (p && p.kind === 'goal') {
+        ring = '<span class="wg-prog" data-ring="' + clamp(p.pct * 100, 0, 100) + '" data-ring-col="' + p.color + '">' +
+          '<canvas></canvas><span class="wg-prog-c">' + pct(p.pct * 100) + '</span></span>';
+      }
+      var bar = '';
+      if (p && p.kind === 'budget') {
+        bar = '<span class="wg-bar"><i style="width:' + clamp(p.pct * 100, 0, 100) + '%;background:' + p.color + '"></i></span>';
+      }
+      var sub = '';
+      if (p && p.kind === 'goal') {
+        sub = p.pct >= 1 ? esc(t('wallet_goal')) + ' ' + pct(100)
+                         : esc(t('wallet_need_more')) + ' ' + money(Math.max(0, Number(w.goal) - bal));
+      } else if (p && p.kind === 'budget') {
+        sub = esc(t('wallet_remaining')) + ' ' + money(Math.max(0, Number(w.monthlyLimit) - monthSpentFromWallet(w.id)));
+      } else {
+        sub = esc(t('wallet_month_in')) + ' ' + money(monthInWallet(w.id));
+      }
+      return '<button class="wg-card' + (bal < 0 ? ' neg' : '') + '" type="button" ' +
+        'data-act="open-wallet" data-id="' + w.id + '" style="--wc-grad:' + walletGrad(w) + '">' +
+        '<span class="wg-top"><span class="wg-ic">' + icon(walletIcon(w)) + '</span>' +
+          '<span class="grow" style="min-width:0;text-align:left">' +
+            '<span class="wg-n" style="display:block">' + esc(walletName(w)) + '</span>' +
+            '<span class="wg-tag">' + esc(walletTypeLabel(w)) + '</span></span>' + ring + '</span>' +
+        '<span class="wg-v">' + money(bal, { sym: false }) + '</span>' + bar + sub +
+      '</button>';
+    }).join('') +
+      '<button class="wg-card add" type="button" data-act="new-wallet">' + icon('plus') + '</button>' +
+    '</div>';
+
+    h += walletNoteHTML();
+
+    body.innerHTML = h;
+    openSheet('sheetWalletDetail');
+    /* draw the goal rings after the DOM exists */
+    var rings = body.querySelectorAll('.wg-prog');
+    for (var i = 0; i < rings.length; i++) {
+      drawRing(rings[i].querySelector('canvas'), Number(rings[i].getAttribute('data-ring')) / 100,
+               rings[i].getAttribute('data-ring-col'), 46);
+    }
+  }
+
+  /** income INTO a wallet this month */
+  function monthInWallet(id) {
+    var pre = todayIso().slice(0, 7);
+    var sum = 0;
+    S.txs.forEach(function (tx) {
+      if (tx.walletId !== id || tx.type !== 'income') return;
+      if (String(tx.date).slice(0, 7) !== pre) return;
+      sum += Number(tx.amount) || 0;
+    });
+    return sum;
+  }
+
+  /** the shared "what a wallet really is" note */
+  function walletNoteHTML() {
+    return '<div class="wnote">' + icon('info') + '<p>' + esc(walletNote()) + '</p></div>';
+  }
+
+  /** small ring painter used by the wallet cards (46px) */
+  function drawRing(cv, ratio, color, size) {
+    if (!cv) return;
+    var dpr = window.devicePixelRatio || 1;
+    size = size || 46;
+    cv.width = size * dpr; cv.height = size * dpr;
+    cv.style.width = size + 'px'; cv.style.height = size + 'px';
+    var c = cv.getContext('2d');
+    if (!c) return;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, size, size);
+    var lw = 4, r = (size - lw) / 2, cx = size / 2, cy = size / 2;
+    c.lineWidth = lw; c.lineCap = 'round';
+    c.strokeStyle = 'rgba(255,255,255,.28)';
+    c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.stroke();
+    var p = clamp(ratio, 0, 1);
+    if (p > 0) {
+      c.strokeStyle = color || '#5E5CE6';
+      c.beginPath(); c.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * p); c.stroke();
+    }
+  }
+
+  /**
+   * v2.2.0 · MONTHLY ALLOCATION — move the configured amount from the main
+   * wallet into each wallet that asks for it, once per calendar month, and
+   * catch up every month that was missed while the app was closed. Recorded as
+   * a normal internal transfer, so income/expense totals never change.
+   */
+  function applyAllocations() {
+    var made = 0;
+    if (!Array.isArray(S.transfers)) S.transfers = [];
+    var pre = todayIso().slice(0, 7);
+    S.wallets.forEach(function (w) {
+      var amt = Number(w.monthlyAlloc) || 0;
+      if (amt <= 0 || w.id === MAIN_WALLET_ID) return;
+      if (w.allocAt === pre) return;
+      S.transfers.push({
+        id: uid('tr'), fromWallet: MAIN_WALLET_ID, toWallet: w.id,
+        amount: Math.round(amt * 100) / 100, date: todayIso(),
+        note: 'মাসিক অটো-সঞ্চয়', alloc: true, createdAt: Date.now()
+      });
+      w.allocAt = pre;
+      made++;
+    });
+    if (made) {
+      /* a fresh month: let the budget wallets roll their leftover over */
+      S.wallets.forEach(function (w) { if (w.type === 'budget') w.budLeftoverAt = pre; });
+    }
+    return made;
+  }
+
   function openWalletDetail(id) {
     var w = walletById(id);
     if (!w) return;
@@ -7577,8 +8316,39 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
 
     h += '<div class="pill-row">' +
       '<button class="pill accent" type="button" data-act="wallet-edit" data-id="' + w.id + '">' + icon('edit') + ' ' + esc(t('wallet_edit')) + '</button>' +
-      '<button class="pill" type="button" data-act="open-transfer">' + icon('swap') + ' ' + esc(t('wallet_transfer')) + '</button>' +
+      '<button class="pill" type="button" data-act="open-transfer">' + icon('swap') + ' ' + esc(t('move_money')) + '</button>' +
     '</div>';
+
+    /* ---- v2.2.0 · purpose block: what kind of pot this is ---- */
+    var pr = walletProgress(w, bal);
+    h += '<div class="card" style="margin-bottom:12px">' +
+      '<div class="row" style="justify-content:space-between;align-items:center">' +
+        '<span class="tchip" style="background:' + (WALLET_TYPE_COLOR[w.type || 'custom'] || '#8E8E93') + '2E;color:' + (WALLET_TYPE_COLOR[w.type || 'custom'] || '#8E8E93') + '">' +
+          esc(walletTypeLabel(w)) + '</span>' +
+        '<span style="font-size:12px;font-weight:700;font-variant-numeric:tabular-nums">' +
+          money(monthInWallet(w.id)) + ' \u2190 ' + money(monthSpentFromWallet(w.id)) + '</span>' +
+      '</div>';
+    if (pr && pr.kind === 'goal') {
+      h += '<div class="row" style="justify-content:space-between;margin-top:10px;font-size:12px;font-weight:600">' +
+        '<span>' + esc(t('wallet_goal')) + '</span><span>' + pct(pr.pct * 100) + '</span></div>';
+      h += '<span class="bar-track" style="margin-top:6px"><span class="bar-fill" style="background:' + pr.color + ';width:' + clamp(pr.pct * 100, 0, 100) + '%"></span></span>';
+      h += '<p style="font-size:11.5px;color:var(--text-3);margin:7px 0 0">' +
+        (pr.pct >= 1 ? esc(t('wallet_goal')) + ' \u2713'
+                     : esc(t('wallet_need_more')) + ' ' + money(Math.max(0, Number(w.goal) - bal))) + '</p>';
+    } else if (pr && pr.kind === 'budget') {
+      h += '<div class="row" style="justify-content:space-between;margin-top:10px;font-size:12px;font-weight:600">' +
+        '<span>' + esc(t('wallet_monthly_limit')) + '</span>' +
+        '<span style="color:' + pr.color + '">' + money(monthSpentFromWallet(w.id)) + ' / ' + money(w.monthlyLimit) + '</span></div>';
+      h += '<span class="bar-track" style="margin-top:6px"><span class="bar-fill" style="background:' + pr.color + ';width:' + clamp(pr.pct * 100, 0, 100) + '%"></span></span>';
+      h += '<p style="font-size:11.5px;color:var(--text-3);margin:7px 0 0">' + esc(t('wallet_remaining')) + ' ' +
+        money(Math.max(0, Number(w.monthlyLimit) - monthSpentFromWallet(w.id))) + '</p>';
+    }
+    if (Number(w.monthlyAlloc) > 0 && w.id !== MAIN_WALLET_ID) {
+      h += '<p style="font-size:11.5px;color:var(--text-3);margin:8px 0 0">' + icon('repeat', 'ic-sm') + ' ' +
+        esc(t('wallet_alloc')) + ' ' + money(w.monthlyAlloc) + '</p>';
+    }
+    h += '</div>';
+    h += walletNoteHTML();
 
     h += '<div class="sec-title" style="margin:6px 2px 9px;">' + esc(t('recent')) + '</div>';
     if (!list.length) {
@@ -7604,8 +8374,13 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     var existing = id ? walletById(id) : null;
     _walletDraft = existing
       ? { id: existing.id, bn: existing.bn || '', en: existing.en || '', icon: recIcon(existing),
-          emoji: existing.emoji || '', color: existing.color || WALLET_COLORS[5], opening: existing.opening || 0, isNew: false }
-      : { id: null, bn: '', en: '', icon: 'wallet', emoji: '', color: WALLET_COLORS[0], opening: 0, isNew: true };
+          emoji: existing.emoji || '', color: existing.color || WALLET_COLORS[5], opening: existing.opening || 0,
+          type: existing.type || 'custom', goal: existing.goal || 0, goalDate: existing.goalDate || '',
+          monthlyAlloc: existing.monthlyAlloc || 0, monthlyLimit: existing.monthlyLimit || 0,
+          leftover: existing.leftover || 'return', main: !!existing.main, isNew: false }
+      : { id: null, bn: '', en: '', icon: 'wallet', emoji: '', color: WALLET_COLORS[0], opening: 0,
+          type: 'savings', goal: 0, goalDate: '', monthlyAlloc: 0, monthlyLimit: 0,
+          leftover: 'return', main: false, isNew: true };
     paintWalletSheet();
     openSheet('sheetWallet');
   }
@@ -7623,7 +8398,34 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     h += '<div class="field"><label>' + esc(t('wallet_name_en')) + '</label>' +
       '<input class="input" type="text" id="walEn" value="' + esc(d.en) + '" maxlength="20" placeholder="bKash" /></div>';
     h += '<div class="field"><label>' + esc(t('wallet_opening')) + ' (' + esc(S.settings.currency) + ')</label>' +
-      '<input class="input" type="number" inputmode="decimal" id="walOpening" value="' + esc(String(d.opening || 0)) + '" /></div>';
+      '<input class="input" type="text" inputmode="decimal" autocomplete="off" id="walOpening" value="' + esc(num(String(d.opening || 0))) + '" /></div>';
+    /* ---- v2.2.0 · purpose fields ---------------------------------------- */
+    h += '<div class="field"><label>' + esc(t('wallet_type')) + '</label><div class="chips" id="walType">';
+    WALLET_TYPES.filter(function (ty) { return ty !== 'main'; }).forEach(function (ty) {
+      var row = WALLET_TYPE_LABEL[ty];
+      h += '<button class="chip' + ((d.type || 'custom') === ty ? ' on' : '') + '" type="button" data-act="pick-wallet-type" data-v="' + ty + '">' +
+        esc(row[S.settings.lang === 'en' ? 1 : 0]) + '</button>';
+    });
+    h += '</div></div>';
+    /* goal wallets: a target amount + an optional target date */
+    if ((d.type || 'custom') === 'savings' || (d.type || 'custom') === 'emergency' || (d.type || 'custom') === 'goal') {
+      h += '<div class="field"><label>' + esc(t('wallet_goal')) + ' (' + esc(S.settings.currency) + ')</label>' +
+        '<input class="input" type="text" inputmode="decimal" autocomplete="off" id="walGoal" value="' + esc(d.goal ? num(String(d.goal)) : '') + '" placeholder="0" /></div>';
+      h += '<div class="field"><label>' + esc(t('wallet_goal_date')) + ' <span style="color:var(--text-3)">(' + esc(t('optional')) + ')</span></label>' +
+        '<input class="input" type="date" id="walGoalDate" value="' + esc(d.goalDate || '') + '" /></div>';
+      h += '<div class="field"><label>' + esc(t('wallet_alloc')) + ' (' + esc(S.settings.currency) + ')</label>' +
+        '<input class="input" type="text" inputmode="decimal" autocomplete="off" id="walAlloc" value="' + esc(d.monthlyAlloc ? num(String(d.monthlyAlloc)) : '') + '" placeholder="0" /></div>';
+    }
+    /* budget wallets: a monthly limit + what to do with the leftover */
+    if ((d.type || 'custom') === 'budget') {
+      h += '<div class="field"><label>' + esc(t('wallet_monthly_limit')) + ' (' + esc(S.settings.currency) + ')</label>' +
+        '<input class="input" type="text" inputmode="decimal" autocomplete="off" id="walLimit" value="' + esc(d.monthlyLimit ? num(String(d.monthlyLimit)) : '') + '" placeholder="0" /></div>';
+      h += '<div class="field"><label>' + esc(t('wallet_leftover')) + '</label><div class="chips" id="walLeftover">' +
+        '<button class="chip' + ((d.leftover || 'return') === 'return' ? ' on' : '') + '" type="button" data-act="pick-wallet-leftover" data-v="return">' + esc(t('wallet_leftover_return')) + '</button>' +
+        '<button class="chip' + (d.leftover === 'carry' ? ' on' : '') + '" type="button" data-act="pick-wallet-leftover" data-v="carry">' + esc(t('wallet_leftover_carry')) + '</button>' +
+        '</div></div>';
+    }
+    h += walletNoteHTML();
     h += '<div class="field"><label>' + esc(t('icon')) + '</label><div class="ic-grid" id="walIconGrid">';
     ['cash','phone-pay','rocket','bank','card','wallet','money-bag','mobile','store','trend-up',
      'briefcase','cart','food','bus','bulb','house','gift','heart','star','tag','shield','abacus',
@@ -7642,7 +8444,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     body.innerHTML = h;
 
     var del = document.getElementById('walletDeleteBtn');
-    if (del) del.hidden = d.isNew || S.wallets.length <= 1;
+    if (del) del.hidden = d.isNew || !!d.main || S.wallets.length <= 1;
   }
 
   function saveWalletFromSheet() {
@@ -7654,14 +8456,32 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     bn = String(bn).trim(); en = String(en).trim();
     if (!bn && !en) { toast(t('wallet_name_bn') + '?', 'warn'); return; }
     if (!isFinite(op)) op = 0;
+    /* ---- v2.2.0 · read the purpose fields ---- */
+    d.type = d.type || 'custom';
+    d.goal = parseAmount((document.getElementById('walGoal') || {}).value || '0');
+    d.goalDate = (document.getElementById('walGoalDate') || {}).value || '';
+    d.monthlyAlloc = parseAmount((document.getElementById('walAlloc') || {}).value || '0');
+    d.monthlyLimit = parseAmount((document.getElementById('walLimit') || {}).value || '0');
+    if (!isFinite(d.goal)) d.goal = 0;
+    if (!isFinite(d.monthlyAlloc)) d.monthlyAlloc = 0;
+    if (!isFinite(d.monthlyLimit)) d.monthlyLimit = 0;
 
     if (d.isNew) {
-      S.wallets.push({ id: uid('w'), bn: bn || en, en: en || bn, icon: d.icon || 'wallet', emoji: '', color: d.color, opening: op, custom: true });
+      S.wallets.push({ id: uid('w'), bn: bn || en, en: en || bn, icon: d.icon || 'wallet', emoji: '',
+        color: d.color, opening: op, custom: true,
+        type: d.type, goal: d.goal, goalDate: d.goalDate, monthlyAlloc: d.monthlyAlloc,
+        monthlyLimit: d.monthlyLimit, leftover: d.leftover || 'return' });
       toast(t('wallet_added'));
     } else {
       var w = walletById(d.id);
       w.bn = bn || w.bn; w.en = en || w.en;
       w.icon = d.icon || 'wallet'; w.emoji = ''; w.color = d.color; w.opening = op;
+      /* the main wallet keeps its identity \u2014 only name/icon/colour/open change */
+      if (!w.main) {
+        w.type = d.type; w.goal = d.goal; w.goalDate = d.goalDate;
+        w.monthlyAlloc = d.monthlyAlloc; w.monthlyLimit = d.monthlyLimit;
+        w.leftover = d.leftover || w.leftover || 'return';
+      }
       toast(t('saved'));
     }
     save(true); haptic('success');
@@ -7672,6 +8492,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   function deleteWallet() {
     var d = _walletDraft;
     if (!d || d.isNew) return;
+    if (d.main) { toast(t('wallet_main_locked'), 'warn'); return; }
     var used = S.txs.filter(function (x) { return x.walletId === d.id; }).length;
     var fallback = S.wallets.filter(function (w) { return w.id !== d.id; })[0];
     if (!fallback) { toast(t('wallet_need_one'), 'warn'); return; }
@@ -7708,24 +8529,25 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
     h += '<div class="field"><label>' + esc(t('wallet_from')) + '</label><div class="chips">';
     S.wallets.forEach(function (w) {
       h += '<button class="chip' + (d.from === w.id ? ' on' : '') + '" type="button" data-act="tr-from" data-v="' + w.id + '">' +
-        esc(w.emoji + ' ' + walletName(w)) + '</button>';
+        icon(walletIcon(w), 'ic-sm') + ' ' + esc(walletName(w)) + '</button>';
     });
     h += '</div></div>';
     h += '<div class="field"><label>' + esc(t('wallet_to')) + '</label><div class="chips">';
     S.wallets.forEach(function (w) {
       if (d.from === w.id) return;   /* the source is never also the target */
       h += '<button class="chip' + (d.to === w.id ? ' on' : '') + '" type="button" data-act="tr-to" data-v="' + w.id + '">' +
-        esc(w.emoji + ' ' + walletName(w)) + '</button>';
+        icon(walletIcon(w), 'ic-sm') + ' ' + esc(walletName(w)) + '</button>';
     });
     h += '</div></div>';
     h += '<div class="field"><label>' + esc(t('amount')) + ' (' + esc(S.settings.currency) + ')</label>' +
-      '<input class="input" type="number" inputmode="decimal" id="trAmount" value="' + esc(d.amount) + '" placeholder="0" /></div>';
+      '<input class="input" type="text" inputmode="decimal" autocomplete="off" id="trAmount" value="' + esc(num(d.amount)) + '" placeholder="0" /></div>';
     h += '<div class="field"><label>' + esc(t('date')) + '</label>' +
       '<input class="input" type="date" id="trDate" value="' + esc(d.date) + '" /></div>';
     h += '<div class="field"><label>' + esc(t('note')) + '</label>' +
       '<input class="input" type="text" id="trNote" value="' + esc(d.note) + '" maxlength="60" /></div>';
     var fb = walletById(d.from), tb = walletById(d.to);
     h += '<p style="font-size:12px;color:var(--text-3);line-height:1.7">' + esc(t('wallet_tr_hint')) + '</p>';
+    h += walletNoteHTML();
     h += '<div class="grid2 mt12"><div class="card mini"><div class="m-lab">' + esc(walletName(fb)) + '</div>' +
       '<div class="m-val">' + money(walletBalance(fb.id)) + '</div></div>' +
       '<div class="card mini"><div class="m-lab">' + esc(walletName(tb)) + '</div>' +
@@ -7850,7 +8672,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       h += '<div class="field"><label>' + esc(t('title')) + '</label>' +
         '<input class="input" type="text" id="rcTitle" value="' + esc(d.title) + '" maxlength="40" placeholder="' + esc(t('recur_title_ph')) + '" /></div>';
       h += '<div class="field"><label>' + esc(t('amount')) + '</label>' +
-        '<input class="input" type="number" inputmode="decimal" id="rcAmount" value="' + esc(d.amount) + '" placeholder="0" /></div>';
+        '<input class="input" type="text" inputmode="decimal" autocomplete="off" id="rcAmount" value="' + esc(num(d.amount)) + '" placeholder="0" /></div>';
       h += '<div class="field"><label>' + esc(t('recur_every')) + '</label><div class="chips">' +
         [['daily','rep_daily'],['weekly','rep_weekly'],['monthly','rep_monthly'],['yearly','rep_yearly']].map(function (f) {
           return '<button class="chip' + (d.freq === f[0] ? ' on' : '') + '" type="button" data-act="recur-freq" data-v="' + f[0] + '">' + esc(t(f[1])) + '</button>';
@@ -7860,11 +8682,11 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
         '<input class="input" type="date" id="rcEnd" value="' + esc(d.end || '') + '" /></div>';
       h += '<div class="field"><label>' + esc(t('category')) + '</label><div class="chips">' +
         S.categories.filter(function (c) { return c.kind === d.type || c.kind === 'both'; }).map(function (c) {
-          return '<button class="chip' + (d.categoryId === c.id ? ' on' : '') + '" type="button" data-act="recur-cat" data-v="' + c.id + '">' + esc(c.emoji + ' ' + catName(c)) + '</button>';
+          return '<button class="chip' + (d.categoryId === c.id ? ' on' : '') + '" type="button" data-act="recur-cat" data-v="' + c.id + '">' + icon(catIcon(c), 'ic-sm') + ' ' + esc(catName(c)) + '</button>';
         }).join('') + '</div></div>';
       h += '<div class="field" style="margin-bottom:0"><label>' + esc(t('wallet')) + '</label><div class="chips">' +
         S.wallets.map(function (w) {
-          return '<button class="chip' + (d.walletId === w.id ? ' on' : '') + '" type="button" data-act="recur-wallet" data-v="' + w.id + '">' + esc(w.emoji + ' ' + walletName(w)) + '</button>';
+          return '<button class="chip' + (d.walletId === w.id ? ' on' : '') + '" type="button" data-act="recur-wallet" data-v="' + w.id + '">' + icon(walletIcon(w), 'ic-sm') + ' ' + esc(walletName(w)) + '</button>';
         }).join('') + '</div></div>';
       h += '<button class="btn btn-primary btn-block" type="button" style="margin-top:14px;" data-act="recur-save">' + esc(t('save')) + '</button>';
       h += '</div>';
@@ -7878,7 +8700,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       h += '<div class="list" style="padding-bottom:10px;">' + S.recurring.map(function (r) {
         var cat = catById(r.categoryId);
         return '<div class="entry-row">' +
-          '<span class="e-badge ' + (r.type === 'income' ? 'got' : 'gave') + '" aria-hidden="true">' + esc(cat.emoji) + '</span>' +
+          '<span class="e-badge ' + (r.type === 'income' ? 'got' : 'gave') + '" aria-hidden="true">' + icon(catIcon(cat)) + '</span>' +
           '<span class="grow" style="min-width:0">' +
             '<span class="tx-name">' + esc(r.title || catName(cat)) + '</span>' +
             '<span class="tx-sub">' + esc(recurLabel(r)) + ' <span class="sep">·</span> ' + esc(shortDate(r.start)) +
@@ -7886,7 +8708,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
           '</span>' +
           '<span class="tx-amt ' + (r.type === 'income' ? 'in' : 'ex') + '">' + money(r.amount) + '</span>' +
           '<button class="icon-btn" style="width:34px;height:34px;border-radius:11px" type="button" data-act="recur-toggle" data-id="' + r.id + '" aria-label="' + esc(t(r.paused ? 'resume' : 'pause')) + '">' +
-            esc(r.paused ? icon('play') : icon('pause')) + '</button>' +
+            (r.paused ? icon('play') : icon('pause')) + '</button>' +
           '<button class="icon-btn" style="width:34px;height:34px;border-radius:11px" type="button" data-act="recur-del" data-id="' + r.id + '" aria-label="' + esc(t('delete')) + '">' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:16px;height:16px"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13"/></svg></button>' +
         '</div>';
@@ -7908,7 +8730,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       start: todayIso(),
       end: '',
       categoryId: tp ? tp.cat : 'bills',
-      walletId: S.wallets[0] ? S.wallets[0].id : 'cash'
+      walletId: S.wallets[0] ? S.wallets[0].id : MAIN_WALLET_ID
     };
     paintRecurSheet();
   }
@@ -8083,7 +8905,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
           '<span style="font-size:13px;font-weight:700;color:' + (d.type === 'income' ? 'var(--income)' : (d.type === 'expense' ? 'var(--expense)' : 'var(--accent)')) + '">' +
           esc(d.type === 'income' ? t('income') : (d.type === 'expense' ? t('expense') : t('baki'))) + '</span></div>' +
         '<div class="row" style="justify-content:space-between;margin-top:8px"><span style="font-size:13px;color:var(--text-3)">' + esc(t('category')) + '</span>' +
-          '<span style="font-size:13px;font-weight:700">' + esc(cat.emoji + ' ' + catName(cat)) + '</span></div>' +
+          '<span style="font-size:13px;font-weight:700">' + icon(catIcon(cat), 'ic-sm') + ' ' + esc(catName(cat)) + '</span></div>' +
         (d.person ? '<div class="row" style="justify-content:space-between;margin-top:8px"><span style="font-size:13px;color:var(--text-3)">' + esc(t('person')) + '</span>' +
           '<span style="font-size:13px;font-weight:700">' + esc(d.person) + '</span></div>' : '') +
       '</div>';
@@ -8200,7 +9022,7 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
   /* helper: a settings-style switch row (kept next to its users) */
   function choiceRow(act, icon, label, sub, value) {
     return '<button class="set-item" type="button" data-act="' + act + '" style="width:100%;text-align:left">' +
-      '<span class="si-ic">' + icon + '</span>' +
+      siIcon(icon) +
       '<span class="si-t"><span class="si-l">' + esc(label) + '</span>' +
       '<span class="si-s">' + esc(sub) + '</span></span>' +
       '<span class="set-val">' + esc(value) + ' ›</span></button>';
@@ -8360,18 +9182,18 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       '<input class="input" type="text" id="pdName" value="' + esc(d.name) + '" maxlength="40" /></div>';
     h += '<div class="grid2">';
     h += '<div class="field"><label>' + esc(t('prod_buy')) + '</label>' +
-      '<input class="input" type="number" inputmode="decimal" id="pdBuy" value="' + esc(String(d.buy)) + '" /></div>';
+      '<input class="input" type="text" inputmode="decimal" autocomplete="off" id="pdBuy" value="' + esc(num(String(d.buy))) + '" /></div>';
     h += '<div class="field"><label>' + esc(t('prod_sell')) + '</label>' +
-      '<input class="input" type="number" inputmode="decimal" id="pdSell" value="' + esc(String(d.sell)) + '" /></div>';
+      '<input class="input" type="text" inputmode="decimal" autocomplete="off" id="pdSell" value="' + esc(num(String(d.sell))) + '" /></div>';
     h += '</div>';
     h += '<div class="grid2">';
     h += '<div class="field"><label>' + esc(t('prod_qty')) + '</label>' +
-      '<input class="input" type="number" inputmode="decimal" id="pdQty" value="' + esc(String(d.qty)) + '" /></div>';
+      '<input class="input" type="text" inputmode="decimal" autocomplete="off" id="pdQty" value="' + esc(num(String(d.qty))) + '" /></div>';
     h += '<div class="field"><label>' + esc(t('prod_unit')) + '</label>' +
       '<input class="input" type="text" id="pdUnit" value="' + esc(d.unit) + '" maxlength="12" /></div>';
     h += '</div>';
     h += '<div class="field"><label>' + esc(t('prod_low')) + '</label>' +
-      '<input class="input" type="number" inputmode="numeric" id="pdLow" value="' + esc(String(d.low)) + '" /></div>';
+      '<input class="input" type="text" inputmode="numeric" autocomplete="off" id="pdLow" value="' + esc(num(String(d.low))) + '" /></div>';
     body.innerHTML = h;
     var del = document.getElementById('prodDeleteBtn');
     if (del) del.hidden = d.isNew;
@@ -8497,9 +9319,9 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
       }).join('') + '</div></div>';
     h += '<div class="grid2">';
     h += '<div class="field"><label>' + esc(t('sale_discount')) + '</label>' +
-      '<input class="input" type="number" inputmode="decimal" id="saleDisc" value="' + esc(String(d.discount || '')) + '" placeholder="0" /></div>';
+      '<input class="input" type="text" inputmode="decimal" autocomplete="off" id="saleDisc" value="' + esc(d.discount ? num(String(d.discount)) : '') + '" placeholder="0" /></div>';
     h += '<div class="field"><label>' + esc(t('sale_paid')) + '</label>' +
-      '<input class="input" type="number" inputmode="decimal" id="salePaid" value="' + esc(String(d.paid)) + '" placeholder="' + esc(String(tt.total)) + '" /></div>';
+      '<input class="input" type="text" inputmode="decimal" autocomplete="off" id="salePaid" value="' + esc(num(String(d.paid))) + '" placeholder="' + esc(num(String(tt.total))) + '" /></div>';
     h += '</div>';
     h += '<div class="field"><label>' + esc(t('date')) + '</label>' +
       '<input class="input" type="date" id="saleDate" value="' + esc(d.date) + '" /></div>';
@@ -9337,7 +10159,10 @@ body[data-shop="true"] .tab.hide-shop{display:flex;}
         if (UI.view === 'settings') renderSettings();
       }).catch(function () { warnOnce('persist', 'সুরক্ষিত স্টোরেজ চাওয়া যায়নি'); });
 
-      if (made) toast(t('recur_added_with', { n: String(num(made)) }));
+      /* a new month may need the monthly allocations moved into their wallets */
+      var allocMade = 0;
+      try { allocMade = applyAllocations(); } catch (err) { warnOnce('alloc', 'মাসিক অটো-সঞ্চয় করা যায়নি'); }
+      if (allocMade) toast(t('wallet_carry_done'));
 
       selfCheck();
 
